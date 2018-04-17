@@ -51,8 +51,8 @@ impl<T> Graph<T> for EdgeList<T> {
         self.vertices.remove(&vertex).ok_or(GraphError::InvalidVertex).map(|_| ())
     }
     fn _create_edge_directed(&mut self, from: Self::Vertex, to: Self::Vertex, weight: Weight) -> Result<()> {
-        let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_default();
-        let edge: &mut Weight = neighbours.entry(to).or_default();
+        let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_insert_with(Default::default);
+        let edge: &mut Weight = neighbours.entry(to).or_insert_with(Default::default);
         *edge = weight;
         Ok(())
     }
@@ -78,7 +78,7 @@ impl<T> Graph<T> for EdgeList<T> {
         }
     }
     fn set_data(&mut self, vertex: Self::Vertex, data: T) -> Result<()> {
-        *self.vertices.entry(vertex).or_default() = Some(data);
+        *self.vertices.entry(vertex).or_insert_with(Default::default) = Some(data);
         Ok(())
     }
     fn get_data(&self, vertex: Self::Vertex) -> Result<Option<&T>> {
