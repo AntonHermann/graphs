@@ -66,7 +66,6 @@ impl<T> Graph<T> for AdjMatrix<T> {
         self.vertices.push(Some(new_vertex));
         new_vertex_id
     }
-    // TODO: vertices[index] => vertices.get
     fn delete_vertex(&mut self, vertex: Self::Vertex) -> Result<()> {
         let maybe_vertex: &mut Option<Vertex<T>> =
             self.vertices.get_mut(vertex).ok_or(GraphError::InvalidVertex)?;
@@ -94,6 +93,9 @@ impl<T> Graph<T> for AdjMatrix<T> {
                 res1.and_then(|_| self._create_edge_directed(to, from, weight))
             }
         }
+    }
+    fn _delete_edge_directed(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()> {
+        self._create_edge_directed(from, to, Weight::Infinity)
     }
     fn delete_edge(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()> {
         self.create_edge(from, to, Weight::Infinity)

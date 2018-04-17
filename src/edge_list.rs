@@ -65,12 +65,17 @@ impl<T> Graph<T> for EdgeList<T> {
             }
         }
     }
-    fn delete_edge(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()> {
+    fn _delete_edge_directed(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()> {
         self.edges.get_mut(&from).and_then(|neighbours| neighbours.remove(&to));
-        if let GraphType::Undirected = self.graph_type() {
-            self.edges.get_mut(&to).and_then(|neighbours| neighbours.remove(&from));
-        }
         Ok(())
+    }
+    fn delete_edge(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()> {
+        if let GraphType::Directed = self.graph_type() {
+            self._delete_edge_directed(from, to)
+        } else {
+            self._delete_edge_directed(from, to)?;
+            self._delete_edge_directed(to, from)
+        }
     }
     fn set_data(&mut self, vertex: Self::Vertex, data: T) -> Result<()> {
         *self.vertices.entry(vertex).or_default() = Some(data);

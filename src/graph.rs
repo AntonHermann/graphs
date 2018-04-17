@@ -45,6 +45,7 @@ pub trait Graph<T> {
     fn delete_vertex(&mut self, vertex: Self::Vertex) -> Result<()>;
     fn _create_edge_directed(&mut self, from: Self::Vertex, to: Self::Vertex, weight: Weight) -> Result<()>;
     fn create_edge(&mut self, from: Self::Vertex, to: Self::Vertex, weight: Weight) -> Result<()>;
+    fn _delete_edge_directed(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()>;
     fn delete_edge(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()>;
     fn set_data(&mut self, vertex: Self::Vertex, data: T) -> Result<()>;
     fn get_data(&self, vertex: Self::Vertex) -> Result<Option<&T>>;
