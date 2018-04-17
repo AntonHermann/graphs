@@ -20,6 +20,19 @@ pub enum GraphError {
     InvalidVertex,
 }
 
+#[macro_export]
+macro_rules! unwrap_vertex {
+    ($e:expr) => {
+        $e.ok_or(GraphError::InvalidVertex)?
+    };
+    ($e:expr, $ret:expr) => {
+        match $e {
+            Some(v) => v,
+            None => return $ret,
+        }
+    };
+}
+
 pub type Result<T> = stdResult<T, GraphError>;
 pub trait Graph<T> {
     type Vertex;
