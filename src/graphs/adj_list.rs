@@ -134,3 +134,20 @@ fn vector_update<A, P>(vector: &mut Vec<A>, predicate: P, el: A)
     // not foud: insert
     vector.push(el);
 }
+
+#[test]
+fn test_vector_update() {
+    let v1 = vec![0,1,2,3,4,5];
+
+    let mut v2 = v1.clone();
+    vector_update(&mut v2, |x| x == &3, 9);
+    assert_eq!(v2, vec![0,1,2,9,4,5], "update");
+
+    let mut v3 = v1.clone();
+    vector_update(&mut v3, |_| false, 9);
+    assert_eq!(v3, vec![0,1,2,3,4,5,9], "append");
+
+    let mut v4 = v1.clone();
+    vector_update(&mut v4, |_| true, 9);
+    assert_eq!(v4, vec![9,1,2,3,4,5], "update only once");
+}
