@@ -1,14 +1,41 @@
 language: rust
+dist: trusty
+env: # required for allow_failures
 cache: cargo
 
 # Run build for all the supportet trains
-rust:
-  - nightly
-  - beta
-  - stable
+# rust:
+#   - nightly
+#   - beta
+#   - stable
 
 matrix:
+  fast-finish: true
+  allow_failures:
+    - rust: stable
+    - env: NAME='cargo-travis'
   include:
+    - env: NAME='cargo-travis'
+      sudo: required
+      before_script:
+        - cargo install cargo-update || echo "cargo-update already installed"
+        - cargo install cargo-travis || echo "cargo-travis already installed"
+      script:
+        - |
+          cargo build --verbose &&
+          cargo coverage --verbose &&
+          bash <(curl -s https://codecov.io/bash) -s target/kcov
+        - |
+          cargo doc --verbose
+      addons:
+        apt:
+          packages:
+            - libcurl4-openssl-dev
+            - libelf-dev
+            - dibdw-dev
+            - binutils-dev
+            - cmake
+
     - rust: nightly-2018-04-15
       env:
         - CLIPPY_VERSION=0.0.194
@@ -18,9 +45,6 @@ matrix:
       script:
         - cargo fmt -- --write-mode=diff
         - cargo clippy -- -D clippy
-  allow_failures:
-    - rust: stable
-  fast-finish: true
 
 # The main build
 script: |
