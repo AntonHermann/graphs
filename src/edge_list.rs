@@ -1,9 +1,6 @@
 pub use graph::*;
 use std::collections::HashMap;
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
-pub struct VertexId(usize);
-
 pub struct EdgeList<T> {
     vertices: HashMap<VertexId, Option<T>>,
     edges: HashMap<VertexId, HashMap<VertexId, Weight>>,
@@ -12,8 +9,6 @@ pub struct EdgeList<T> {
 }
 
 impl<T> Graph<T> for EdgeList<T> {
-    type Vertex = VertexId;
-
     fn new(graph_type: GraphType) -> Self {
         EdgeList {
             vertices: HashMap::new(),
@@ -27,36 +22,36 @@ impl<T> Graph<T> for EdgeList<T> {
         self.graph_type
     }
 
-    fn vertices(&self) -> Vec<Self::Vertex> {
+    fn vertices(&self) -> Vec<VertexId> {
         use std::collections::hash_map::Keys;
         let keys: Keys<VertexId, _> = self.vertices.keys();
         let collected: Vec<_> = keys.cloned().collect();
         collected
     }
 
-    fn get_weight(&self, from: Self::Vertex, to: Self::Vertex) -> Result<Weight> {
+    fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
         if !self.vertices.contains_key(&from) || !self.vertices.contains_key(&to) {
             return Err(GraphError::InvalidVertex)
         }
         Ok(self.edges.get(&from).and_then(|neighbours| neighbours.get(&to).map(|w| *w)).unwrap_or_default())
     }
-    fn create_vertex(&mut self) -> Self::Vertex {
+    fn create_vertex(&mut self) -> VertexId {
         let new_id = VertexId(self.vertice_next_id);
         self.vertice_next_id += 1;
         self.vertices.insert(new_id, None);
         new_id
     }
 
-    fn delete_vertex(&mut self, vertex: Self::Vertex) -> Result<()> {
+    fn delete_vertex(&mut self, vertex: VertexId) -> Result<()> {
         self.vertices.remove(&vertex).ok_or(GraphError::InvalidVertex).map(|_| ())
     }
-    fn _create_edge_directed(&mut self, from: Self::Vertex, to: Self::Vertex, weight: Weight) -> Result<()> {
+    fn _create_edge_directed(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
         let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_insert_with(Default::default);
         let edge: &mut Weight = neighbours.entry(to).or_insert_with(Default::default);
         *edge = weight;
         Ok(())
     }
-    fn create_edge(&mut self, from: Self::Vertex, to: Self::Vertex, weight: Weight) -> Result<()> {
+    fn create_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
         let res1 = self._create_edge_directed(from, to, weight);
         match self.graph_type() {
             GraphType::Directed => res1,
@@ -65,11 +60,11 @@ impl<T> Graph<T> for EdgeList<T> {
             }
         }
     }
-    fn _delete_edge_directed(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()> {
+    fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
         self.edges.get_mut(&from).and_then(|neighbours| neighbours.remove(&to));
         Ok(())
     }
-    fn delete_edge(&mut self, from: Self::Vertex, to: Self::Vertex) -> Result<()> {
+    fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
         if let GraphType::Directed = self.graph_type() {
             self._delete_edge_directed(from, to)
         } else {
@@ -77,11 +72,11 @@ impl<T> Graph<T> for EdgeList<T> {
             self._delete_edge_directed(to, from)
         }
     }
-    fn set_data(&mut self, vertex: Self::Vertex, data: T) -> Result<()> {
+    fn set_data(&mut self, vertex: VertexId, data: T) -> Result<()> {
         *self.vertices.entry(vertex).or_insert_with(Default::default) = Some(data);
         Ok(())
     }
-    fn get_data(&self, vertex: Self::Vertex) -> Result<Option<&T>> {
+    fn get_data(&self, vertex: VertexId) -> Result<Option<&T>> {
         self.vertices.get(&vertex).ok_or(GraphError::InvalidVertex).map(|e| e.as_ref())
     }
 }
