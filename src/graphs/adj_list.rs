@@ -104,13 +104,12 @@ impl<T> UndirectionedGraph<T> for AdjList<T> {
     fn create_undirected_edge(&mut self, v1: VertexId, v2: VertexId, weight: Weight) -> Result<()> {
         let mut ce = move |from: &VertexId, to: &VertexId| -> Result<()> {
             let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(from));
-            // let vertex: &mut Vertex<T> = self.vertices.get_mut(from).unwrap();
             let mut adj_verts: &mut AdjacentVertices = &mut vertex.0;
             // update or insert edge
             vector_update(&mut adj_verts, |(v, _)| v == to, (*to, weight));
             Ok(())
         };
-        ce(&v1, &v2).and(ce(&v1, &v1))
+        ce(&v1, &v2).and(ce(&v2, &v1))
     }
     fn delete_undirected_edge(&mut self, v1: VertexId, v2: VertexId) -> Result<()> {
         let mut de = move |from: &VertexId, to: &VertexId| -> Result<()> {
