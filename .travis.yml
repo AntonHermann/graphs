@@ -1,0 +1,18 @@
+language: rust
+cache: cargo
+dist: trusty
+os:
+  - linux
+  - osx
+
+# Run build for all the supportet trains
+rust:
+  - nightly
+  - beta
+  - stable
+  - 1.0.0
+
+# The main build
+script:
+  - cargo build
+  - cargo test
