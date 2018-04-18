@@ -4,8 +4,8 @@ env: # required for allow_failures
 cache: cargo
 
 # Run build for all the supportet trains
-# rust:
-#   - nightly
+rust:
+  - nightly
 #   - beta
 #   - stable
 
@@ -32,7 +32,7 @@ matrix:
           packages:
             - libcurl4-openssl-dev
             - libelf-dev
-            - dibdw-dev
+            - libdw-dev
             - binutils-dev
             - cmake
 
