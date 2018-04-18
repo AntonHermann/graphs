@@ -6,7 +6,7 @@ cache: cargo
 # Run build for all the supportet trains
 rust:
   - nightly
-#   - beta
+  - beta
 #   - stable
 
 matrix:
@@ -14,6 +14,7 @@ matrix:
   allow_failures:
     - rust: stable
     - env: NAME='cargo-travis'
+    - env: NAME='clippy+format'
   include:
     - env: NAME='cargo-travis'
       sudo: required
@@ -38,6 +39,7 @@ matrix:
 
     - rust: nightly-2018-04-15
       env:
+        - NAME='clippy+format'
         - CLIPPY_VERSION=0.0.194
       before_script:
         - rustup component add rustfmt-preview
