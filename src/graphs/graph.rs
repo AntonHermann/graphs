@@ -21,10 +21,10 @@ impl PartialOrd for Weight {
 impl Ord for Weight {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (Weight::Infinity, Weight::Infinity) => Ordering::Equal,
-            (_, Weight::Infinity) => Ordering::Less,
-            (Weight::Infinity, _) => Ordering::Greater,
-            (Weight::W(w_self), Weight::W(w_other)) => w_self.cmp(w_other),
+            (&Weight::Infinity , &Weight::Infinity  ) => Ordering::Equal,
+            (_                 , &Weight::Infinity  ) => Ordering::Less,
+            (&Weight::Infinity , _                  ) => Ordering::Greater,
+            (&Weight::W(w_self), &Weight::W(w_other)) => w_self.cmp(&w_other),
         }
     }
 }

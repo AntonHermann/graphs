@@ -29,8 +29,8 @@ impl<T> Graph<T> for AdjList<T> {
         let vertex: &Vertex<T> = unwrap_vertex!(self.vertices.get(&from));
         if !self.vertices.contains_key(&to) { return Err(GraphError::InvalidVertex) }
         let adj_verts: &AdjacentVertices = &vertex.0;
-        let (_, weight) = unwrap_vertex!(adj_verts.iter().find(|(v,_)| v == &to), Ok(Weight::Infinity));
-        Ok(*weight)
+        let &(_, weight) = unwrap_vertex!(adj_verts.iter().find(|&(v,_)| v == &to), Ok(Weight::Infinity));
+        Ok(weight)
     }
     fn create_vertex(&mut self) -> VertexId {
         let new_id = VertexId(self.vertice_next_id);
@@ -43,7 +43,7 @@ impl<T> Graph<T> for AdjList<T> {
     fn delete_vertex(&mut self, vertex: VertexId) -> Result<()> {
         unwrap_vertex!(self.vertices.remove(&vertex)); // removes vector with all outgoing edges
         for (vert, _) in self.vertices.values_mut() {
-            vert.retain(|(v, _)| v != &vertex); // keep only edges not going to `vertex`
+            vert.retain(|&(v, _)| v != vertex); // keep only edges not going to `vertex`
         }
         Ok(())
     }
@@ -70,7 +70,7 @@ impl<T> DirectedGraph<T> for AdjList<T> {
             let adj: &AdjacentVertices = &v.0;
             // lookup `vertex` in `from`s adjacency list
             let maybe_weight: Option<&Weight> = adj.iter()
-                .find(|(to, _)| to == &vertex)
+                .find(|&(to, _)| to == &vertex)
                 // if found, map it to its weight
                 .map(|(_to, w)| w);
             maybe_weight.map(|weight| (*from, *weight))
@@ -80,7 +80,7 @@ impl<T> DirectedGraph<T> for AdjList<T> {
     fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
         self.vertices.iter().flat_map(|(from, v): (&VertexId, &Vertex<T>)| {
             let adj_vertices: &AdjacentVertices = &v.0;
-            adj_vertices.iter().map(move |(to, weight): &(VertexId, Weight)| (*from, *to, *weight))
+            adj_vertices.iter().map(move |&(to, weight): &(VertexId, Weight)| (*from, to, weight))
         }).collect()
     }
     fn create_directed_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
