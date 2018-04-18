@@ -83,14 +83,17 @@ fn get_weight_undirected(g) {
 );
 make_test!((AdjList)
 fn delete_edge_directed(g) {
-    let v1 = g.create_vertex();
-    let v2 = g.create_vertex();
-    g.create_directed_edge(v1, v2, Weight::W(5)).expect("1");
-    assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-    assert_ne!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-    g.delete_directed_edge(v1, v2).expect("2");
-    assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-    assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
+    let from = g.create_vertex();
+    let to = g.create_vertex();
+    g.create_directed_edge(from, to, Weight::W(5)).unwrap();
+    // the edge we just created
+    assert_eq!(g.get_weight(from, to).unwrap(), Weight::W(5), "edge creation failed");
+    // shouldn't exist, since it's a directed edge
+    assert_ne!(g.get_weight(to, from).unwrap(), Weight::W(5), "edge should be directed, but isn't");
+    g.delete_directed_edge(from, to).unwrap();
+    // edge should be removed again, no edge <=> Infinity
+    assert_eq!(g.get_weight(from, to).unwrap(), Weight::Infinity, "edge removal failed");
+    assert_eq!(g.get_weight(to, from).unwrap(), Weight::Infinity);
 }
 );
 make_test!((AdjList)
@@ -98,11 +101,11 @@ fn delete_edge_undirected(g) {
     let v1 = g.create_vertex();
     let v2 = g.create_vertex();
     g.create_undirected_edge(v1, v2, Weight::W(5)).unwrap();
-    assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-    assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
+    assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5), "edge creation failed");
+    assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::W(5), "inverse edge wasn't created");
     g.delete_undirected_edge(v1, v2).unwrap();
-    assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-    assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
+    assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity, "edge removal failed");
+    assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity, "inverse edge wasn't removed");
 }
 );
 make_test!((AdjList)
