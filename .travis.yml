@@ -5,15 +5,29 @@ os:
   - linux
   - osx
 
+sudo: required
+
 # Run build for all the supportet trains
 rust:
   - nightly
   - beta
   - stable
+
 matrix:
   allow_failures:
     - rust: stable
   fast-finish: true
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - cmake
+      - gcc
+      - binutils-dev
+      - libiberty-dev
 
 # Add clippy
 before_script:
@@ -31,3 +45,18 @@ script:
       if [[ "$TRAVIS_RUST_VERSION" == "nightly" && $CLIPPY ]]; then
         cargo clippy
       fi
+
+after_success: |
+  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+  tar xzf master.tar.gz &&
+  cd kcov-master &&
+  mkdir build &&
+  cd build &&
+  cmake .. &&
+  make &&
+  make install DESTDIR=../../kcov-build &&
+  cd ../.. &&
+  rm -rf kcov-master &&
+  for file in target/debug/examplerust-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
+  bash <(curl -s https://codecov.io/bash) &&
+  echo "Uploaded code coverage"
