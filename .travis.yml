@@ -11,7 +11,19 @@ rust:
   - beta
   # - stable
 
+# Add clippy
+before_script:
+  - |
+      if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then
+        ( ( cargo install clippy && export CLIPPY=true ) || export CLIPPY=false );
+      fi
+  - export PATH=$PATH:~/.cargo/bin
+
 # The main build
 script:
   - cargo build
   - cargo test
+  - |
+      if [[ "$TRAVIS_RUST_VERSION" == "nightly" && $CLIPPY ]]; then
+        cargo clippy
+      fi
