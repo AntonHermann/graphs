@@ -1,20 +1,18 @@
-pub use graph::*;
+use graphs::graph::*;
 use std::collections::HashMap;
 
-type Data<T> = Option<T>;
-type AdjacentVertices = Vec<(VertexId, Weight)>;
-type Vertex<T> = (AdjacentVertices, Data<T>);
-
-pub struct AdjList<T> {
-    vertices: HashMap<VertexId, Vertex<T>>,
+pub struct EdgeList<T> {
+    vertices: HashMap<VertexId, Option<T>>,
+    edges: HashMap<VertexId, HashMap<VertexId, Weight>>,
     graph_type: GraphType,
     vertice_next_id: usize,
 }
 
-impl<T> Graph<T> for AdjList<T> {
+impl<T> Graph<T> for EdgeList<T> {
     fn new(graph_type: GraphType) -> Self {
-        AdjList {
+        EdgeList {
             vertices: HashMap::new(),
+            edges: HashMap::new(),
             graph_type,
             vertice_next_id: 0,
         }
@@ -32,35 +30,25 @@ impl<T> Graph<T> for AdjList<T> {
     }
 
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
-        let vertex: &Vertex<T> = unwrap_vertex!(self.vertices.get(&from));
-        if !self.vertices.contains_key(&to) { return Err(GraphError::InvalidVertex) }
-        let adj_verts: &AdjacentVertices = &vertex.0;
-        let (_, weight) = unwrap_vertex!(adj_verts.iter().find(|(v,_)| v == &to), Ok(Weight::Infinity));
-        Ok(*weight)
+        if !self.vertices.contains_key(&from) || !self.vertices.contains_key(&to) {
+            return Err(GraphError::InvalidVertex)
+        }
+        Ok(self.edges.get(&from).and_then(|neighbours| neighbours.get(&to).map(|w| *w)).unwrap_or_default())
     }
     fn create_vertex(&mut self) -> VertexId {
         let new_id = VertexId(self.vertice_next_id);
         self.vertice_next_id += 1;
-        // self.vertices.insert(new_id, (Vec::new(), None));
-        self.vertices.insert(new_id, Default::default());
+        self.vertices.insert(new_id, None);
         new_id
     }
 
     fn delete_vertex(&mut self, vertex: VertexId) -> Result<()> {
-        unwrap_vertex!(self.vertices.remove(&vertex)); // removes vector with all outgoing edges
-        for (vert, _) in self.vertices.values_mut() {
-            vert.retain(|(v, _)| v != &vertex); // keep only edges not going to `vertex`
-        }
-        Ok(())
+        self.vertices.remove(&vertex).ok_or(GraphError::InvalidVertex).map(|_| ())
     }
     fn _create_edge_directed(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
-        let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));
-        let adj_verts: &mut AdjacentVertices = &mut vertex.0;
-        if let Some((_, ref mut w)) = adj_verts.iter_mut().find(|(v, _)| v == &to) {
-            *w = weight;
-            return Ok(());
-        }
-        adj_verts.push((to, weight));
+        let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_insert_with(Default::default);
+        let edge: &mut Weight = neighbours.entry(to).or_insert_with(Default::default);
+        *edge = weight;
         Ok(())
     }
     fn create_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
@@ -73,30 +61,23 @@ impl<T> Graph<T> for AdjList<T> {
         }
     }
     fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-        let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));
-        let adj_verts: &mut AdjacentVertices = &mut vertex.0;
-        adj_verts.retain(|(v, _)| v != &to); // keep only edges not going to `to`
+        self.edges.get_mut(&from).and_then(|neighbours| neighbours.remove(&to));
         Ok(())
     }
     fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-        let res1 = self._delete_edge_directed(from, to);
-        match self.graph_type() {
-            GraphType::Directed => res1,
-            GraphType::Undirected => {
-                res1.and_then(|_| self._delete_edge_directed(to, from))
-            }
+        if let GraphType::Directed = self.graph_type() {
+            self._delete_edge_directed(from, to)
+        } else {
+            self._delete_edge_directed(from, to)?;
+            self._delete_edge_directed(to, from)
         }
     }
     fn set_data(&mut self, vertex: VertexId, data: T) -> Result<()> {
-        let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&vertex));
-        let d: &mut Data<T> = &mut vertex.1;
-        *d = Some(data);
+        *self.vertices.entry(vertex).or_insert_with(Default::default) = Some(data);
         Ok(())
     }
     fn get_data(&self, vertex: VertexId) -> Result<Option<&T>> {
-        let vertex: &Vertex<T> = unwrap_vertex!(self.vertices.get(&vertex));
-        let d: &Data<T> = &vertex.1;
-        Ok(d.as_ref())
+        self.vertices.get(&vertex).ok_or(GraphError::InvalidVertex).map(|e| e.as_ref())
     }
 }
 
@@ -105,12 +86,12 @@ mod tests {
     use super::*;
     #[test]
     fn creation_and_empty_graph() {
-        let g: AdjList<()> = AdjList::new(GraphType::Undirected);
+        let g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
         assert_eq!(g.vertices(), Vec::new());
     }
     #[test]
     fn vertices() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
+        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
         let mut verts = Vec::new();
         for _ in 0..5 {
             verts.push(g.create_vertex());
@@ -121,14 +102,14 @@ mod tests {
     }
     #[test]
     fn get_weight_no_edge() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Directed);
+        let mut g: EdgeList<()> = EdgeList::new(GraphType::Directed);
         let v1 = g.create_vertex();
         let v2 = g.create_vertex();
         assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
     }
     #[test]
     fn get_weight_directed() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Directed);
+        let mut g: EdgeList<()> = EdgeList::new(GraphType::Directed);
         let v1 = g.create_vertex();
         let v2 = g.create_vertex();
         g.create_edge(v1, v2, Weight::W(5)).unwrap();
@@ -138,7 +119,7 @@ mod tests {
     }
     #[test]
     fn get_weight_undirected() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
+        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
         let v1 = g.create_vertex();
         let v2 = g.create_vertex();
         g.create_edge(v1, v2, Weight::W(5)).unwrap();
@@ -148,19 +129,19 @@ mod tests {
     }
     #[test]
     fn delete_edge_directed() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Directed);
+        let mut g: EdgeList<()> = EdgeList::new(GraphType::Directed);
         let v1 = g.create_vertex();
         let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).expect("1");
+        g.create_edge(v1, v2, Weight::W(5)).unwrap();
         assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
         assert_ne!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-        g.delete_edge(v1, v2).expect("2");
+        g.delete_edge(v1, v2).unwrap();
         assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
         assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
     }
     #[test]
     fn delete_edge_undirected() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
+        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
         let v1 = g.create_vertex();
         let v2 = g.create_vertex();
         g.create_edge(v1, v2, Weight::W(5)).unwrap();
@@ -172,7 +153,7 @@ mod tests {
     }
     #[test]
     fn delete_vertex() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
+        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
         let v1 = g.create_vertex();
         let v2 = g.create_vertex();
         g.create_edge(v1, v2, Weight::W(5)).unwrap();
@@ -181,7 +162,7 @@ mod tests {
     }
     #[test]
     fn out_of_bounds() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
+        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
         let _ = g.create_vertex(); // 0
         let v1 = g.create_vertex(); // 1
         assert_eq!(g.get_weight(v1, VertexId(2)), Err(GraphError::InvalidVertex));
