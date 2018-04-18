@@ -9,7 +9,11 @@ os:
 rust:
   - nightly
   - beta
-  # - stable
+  - stable
+matrix:
+  allow_failures:
+    - rust: stable
+  fast-finish: true
 
 # Add clippy
 before_script:
