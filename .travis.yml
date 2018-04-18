@@ -14,7 +14,7 @@ matrix:
   allow_failures:
     - rust: stable
     - env: NAME='cargo-travis'
-    - env: CLIPPY_VERSION=0.0.194
+    - env: CLIPPY_VERSION=*
   include:
     - env: NAME='cargo-travis'
       sudo: required
