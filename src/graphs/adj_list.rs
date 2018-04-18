@@ -7,21 +7,15 @@ type Vertex<T> = (AdjacentVertices, Data<T>);
 
 pub struct AdjList<T> {
     vertices: HashMap<VertexId, Vertex<T>>,
-    graph_type: GraphType,
     vertice_next_id: usize,
 }
 
 impl<T> Graph<T> for AdjList<T> {
-    fn new(graph_type: GraphType) -> Self {
+    fn new() -> Self {
         AdjList {
             vertices: HashMap::new(),
-            graph_type,
             vertice_next_id: 0,
         }
-    }
-
-    fn graph_type(&self) -> GraphType {
-        self.graph_type
     }
 
     fn vertices(&self) -> Vec<VertexId> {
@@ -53,40 +47,6 @@ impl<T> Graph<T> for AdjList<T> {
         }
         Ok(())
     }
-    fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-        let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));
-        let adj_verts: &mut AdjacentVertices = &mut vertex.0;
-        if let Some((_, ref mut w)) = adj_verts.iter_mut().find(|(v, _)| v == &to) {
-            *w = weight.into();
-            return Ok(());
-        }
-        adj_verts.push((to, weight.into()));
-        Ok(())
-    }
-    fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-        let res1 = self._create_edge_directed(from, to, weight);
-        match self.graph_type() {
-            GraphType::Directed => res1,
-            GraphType::Undirected => {
-                res1.and_then(|_| self._create_edge_directed(to, from, weight))
-            }
-        }
-    }
-    fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-        let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));
-        let adj_verts: &mut AdjacentVertices = &mut vertex.0;
-        adj_verts.retain(|(v, _)| v != &to); // keep only edges not going to `to`
-        Ok(())
-    }
-    fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-        let res1 = self._delete_edge_directed(from, to);
-        match self.graph_type() {
-            GraphType::Directed => res1,
-            GraphType::Undirected => {
-                res1.and_then(|_| self._delete_edge_directed(to, from))
-            }
-        }
-    }
     fn set_data(&mut self, vertex: VertexId, data: T) -> Result<()> {
         let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&vertex));
         let d: &mut Data<T> = &mut vertex.1;
@@ -99,98 +59,79 @@ impl<T> Graph<T> for AdjList<T> {
         Ok(d.as_ref())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn creation_and_empty_graph() {
-        let g: AdjList<()> = AdjList::new(GraphType::Undirected);
-        assert_eq!(g.vertices(), Vec::new());
+impl<T> DirectedGraph<T> for AdjList<T> {
+    fn outgoing_edges(&self, vertex: VertexId) -> Result<Vec<(VertexId, Weight)>> {
+        let vertex: &Vertex<T> = unwrap_vertex!(self.vertices.get(&vertex));
+        let adj: &AdjacentVertices = &vertex.0;
+        Ok(adj.clone())
     }
-    #[test]
-    fn vertices() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
-        let mut verts = Vec::new();
-        for _ in 0..5 {
-            verts.push(g.create_vertex());
+    fn incoming_edges(&self, vertex: VertexId) -> Result<Vec<(VertexId, Weight)>> {
+        let is_incoming = |(from, v): (&VertexId, &Vertex<T>)| -> Option<(VertexId, Weight)> {
+            let adj: &AdjacentVertices = &v.0;
+            // lookup `vertex` in `from`s adjacency list
+            let maybe_weight: Option<&Weight> = adj.iter()
+                .find(|(to, _)| to == &vertex)
+                // if found, map it to its weight
+                .map(|(_to, w)| w);
+            maybe_weight.map(|weight| (*from, *weight))
+        };
+        Ok(self.vertices.iter().filter_map(is_incoming).collect())
+    }
+    fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
+        self.vertices.iter().flat_map(|(from, v): (&VertexId, &Vertex<T>)| {
+            let adj_vertices: &AdjacentVertices = &v.0;
+            adj_vertices.iter().map(move |(to, weight): &(VertexId, Weight)| (*from, *to, *weight))
+        }).collect()
+    }
+    fn create_directed_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
+        let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));
+        let adj_verts: &mut AdjacentVertices = &mut vertex.0;
+        if let Some((_, ref mut w)) = adj_verts.iter_mut().find(|(v, _)| v == &to) {
+            *w = weight.into();
+            return Ok(());
         }
-        let mut g_verts = g.vertices();
-        g_verts.sort_unstable_by_key(|v: &VertexId| v.0);
-        assert_eq!(verts, g_verts);
+        adj_verts.push((to, weight.into()));
+        Ok(())
     }
-    #[test]
-    fn get_weight_no_edge() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
+    fn delete_directed_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+        let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));
+        let adj_verts: &mut AdjacentVertices = &mut vertex.0;
+        adj_verts.retain(|(v, _)| v != &to); // keep only edges not going to `to`
+        Ok(())
     }
-    #[test]
-    fn get_weight_directed() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        //? Not equal because directed Graph
-        assert_ne!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
+}
+impl<T> UndirectionedGraph<T> for AdjList<T> {
+    fn create_undirected_edge(&mut self, v1: VertexId, v2: VertexId, weight: Weight) -> Result<()> {
+        let mut ce = move |from: &VertexId, to: &VertexId| -> Result<()> {
+            let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(from));
+            // let vertex: &mut Vertex<T> = self.vertices.get_mut(from).unwrap();
+            let mut adj_verts: &mut AdjacentVertices = &mut vertex.0;
+            // update or insert edge
+            vector_update(&mut adj_verts, |(v, _)| v == to, (*to, weight));
+            Ok(())
+        };
+        ce(&v1, &v2).and(ce(&v1, &v1))
     }
-    #[test]
-    fn get_weight_undirected() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        //? Equal because undirected Graph
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
+    fn delete_undirected_edge(&mut self, v1: VertexId, v2: VertexId) -> Result<()> {
+        let mut de = move |from: &VertexId, to: &VertexId| -> Result<()> {
+            let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(from));
+            let adj_verts: &mut AdjacentVertices = &mut vertex.0;
+            adj_verts.retain(|(v, _)| v != to); // keep only edges not going to `to`
+            Ok(())
+        };
+        de(&v1, &v2).and(de(&v2, &v1))
     }
-    #[test]
-    fn delete_edge_directed() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).expect("1");
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        assert_ne!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-        g.delete_edge(v1, v2).expect("2");
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
+}
+
+fn vector_update<A, P>(vector: &mut Vec<A>, predicate: P, el: A)
+    where P: Fn(&A) -> bool,
+{
+    for v in vector.iter_mut() {
+        if predicate(v) {
+            *v = el;
+            return;
+        }
     }
-    #[test]
-    fn delete_edge_undirected() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-        g.delete_edge(v1, v2).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
-    }
-    #[test]
-    fn delete_vertex() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        g.delete_vertex(v1).unwrap();
-        assert_eq!(g.get_weight(v1, v2), Err(GraphError::InvalidVertex));
-    }
-    #[test]
-    fn out_of_bounds() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Undirected);
-        let _ = g.create_vertex(); // 0
-        let v1 = g.create_vertex(); // 1
-        assert_eq!(g.get_weight(v1, VertexId(2)), Err(GraphError::InvalidVertex));
-    }
-    #[test]
-    fn weight_converstion() {
-        let mut g: AdjList<()> = AdjList::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, 5).unwrap();
-    }
+    // not foud: insert
+    vector.push(el);
 }

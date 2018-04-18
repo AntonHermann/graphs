@@ -34,13 +34,6 @@ impl From<usize> for Weight {
     }
 }
 
-/// The type of a `Graph`
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum GraphType {
-    Directed,
-    Undirected,
-}
-
 /// The error type used in `Graph`
 /// May get expanded later to cover other error cases
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -74,12 +67,7 @@ pub trait Graph<T> {
     ///
     /// The Graph is initially created with a capacity of 0, so it will not
     /// allocate until it is first inserted into.
-    fn new(graph_type: GraphType) -> Self;
-
-    /// Returns the type of the `Graph`.
-    ///
-    /// Can be either GraphType::Directed or GraphType::Undirected
-    fn graph_type(&self) -> GraphType;
+    fn new() -> Self;
 
     /// Returns a Vector containing all vertices
     fn vertices(&self) -> Vec<VertexId>;
@@ -97,30 +85,6 @@ pub trait Graph<T> {
     /// Returns Err(GraphError::InvalidVertex) if this vector didn't exist
     fn delete_vertex(&mut self, vertex: VertexId) -> Result<()>;
 
-    /// Creates a new directed edge.
-    /// Prefer using `Graph::create_edge()` since it handles the different graph
-    /// types correctly. This method is only an internal helper
-    ///
-    /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
-    fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()>;
-
-    /// Creates a new edge.
-    ///
-    /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
-    fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()>;
-
-    /// Creates a directed edge.
-    /// Prefer using `Graph::delete_edge()` since it handles the different graph
-    /// types correctly. This method is only an internal helper
-    ///
-    /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
-    fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()>;
-
-    /// Deletes an edge.
-    ///
-    /// Returns Err(GraphError::InvalidVertex) if one of the vectors doesn't exist
-    fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()>;
-
     /// Sets the data associated with the given vertex.
     ///
     /// Overrides the previous data
@@ -133,4 +97,31 @@ pub trait Graph<T> {
     /// Returns Err(GraphError::InvalidVertex) if the vector doesn't exist
     /// Returns Ok(None) if no data was associated with this vector
     fn get_data(&self, vertex: VertexId) -> Result<Option<&T>>;
+}
+
+pub trait DirectedGraph<T>: Graph<T> {
+    fn outgoing_edges(&self, vertex: VertexId) -> Result<Vec<(VertexId, Weight)>>;
+    fn incoming_edges(&self, vertex: VertexId) -> Result<Vec<(VertexId, Weight)>>;
+    fn edges(&self) -> Vec<(VertexId, VertexId, Weight)>;
+
+    /// Creates a new edge.
+    ///
+    /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
+    fn create_directed_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()>;
+
+    /// Deletes an edge.
+    ///
+    /// Returns Err(GraphError::InvalidVertex) if one of the vectors doesn't exist
+    fn delete_directed_edge(&mut self, from: VertexId, to: VertexId) -> Result<()>;
+}
+pub trait UndirectionedGraph<T>: Graph<T> {
+    /// Creates a new edge.
+    ///
+    /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
+    fn create_undirected_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()>;
+
+    /// Deletes an edge.
+    ///
+    /// Returns Err(GraphError::InvalidVertex) if one of the vectors doesn't exist
+    fn delete_undirected_edge(&mut self, from: VertexId, to: VertexId) -> Result<()>;
 }

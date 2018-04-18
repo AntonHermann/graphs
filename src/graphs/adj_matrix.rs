@@ -8,19 +8,13 @@ struct Vertex<T> {
 pub struct AdjMatrix<T> {
     // Option to allow deletion of vertices
     vertices: Vec<Option<Vertex<T>>>,
-    graph_type: GraphType,
 }
 
 impl<T> Graph<T> for AdjMatrix<T> {
-    fn new(graph_type: GraphType) -> Self {
+    fn new() -> Self {
         AdjMatrix {
             vertices: Vec::with_capacity(10),
-            graph_type,
         }
-    }
-
-    fn graph_type(&self) -> GraphType {
-        self.graph_type
     }
 
     fn vertices(&self) -> Vec<VertexId> {
@@ -70,34 +64,6 @@ impl<T> Graph<T> for AdjMatrix<T> {
         *maybe_vertex = None;
         Ok(())
     }
-    fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-        // may fail if `from` is out of bounds
-        let maybe_vertex: Option<&mut Vertex<T>> =
-            self.vertices.get_mut(from.0).ok_or(GraphError::InvalidVertex)?.as_mut();
-        // may fail if vertex has been deleted
-        let vertex: &mut Vertex<T> = maybe_vertex.ok_or(GraphError::InvalidVertex)?;
-        let neighbours: &mut Vec<Weight> = &mut vertex.neighbours;
-
-        // may fail if `to` is out of bounds
-        let edge: &mut Weight = neighbours.get_mut(to.0).ok_or(GraphError::InvalidVertex)?;
-        *edge = weight.into();
-        Ok(())
-    }
-    fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-        let res1 = self._create_edge_directed(from, to, weight);
-        match self.graph_type() {
-            GraphType::Directed => res1,
-            GraphType::Undirected => {
-                res1.and_then(|_| self._create_edge_directed(to, from, weight))
-            }
-        }
-    }
-    fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-        self._create_edge_directed(from, to, Weight::Infinity)
-    }
-    fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-        self.create_edge(from, to, Weight::Infinity)
-    }
     fn set_data(&mut self, vertex: VertexId, data: T) -> Result<()> {
         let vertex_if_existent: Option<&mut Vertex<T>> = self.vertices.get_mut(vertex.0)
             .ok_or(GraphError::InvalidVertex)?.as_mut();
@@ -113,89 +79,31 @@ impl<T> Graph<T> for AdjMatrix<T> {
         Ok(vertex.data.as_ref())
     }
 }
+    // fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
+    //     // may fail if `from` is out of bounds
+    //     let maybe_vertex: Option<&mut Vertex<T>> =
+    //         self.vertices.get_mut(from.0).ok_or(GraphError::InvalidVertex)?.as_mut();
+    //     // may fail if vertex has been deleted
+    //     let vertex: &mut Vertex<T> = maybe_vertex.ok_or(GraphError::InvalidVertex)?;
+    //     let neighbours: &mut Vec<Weight> = &mut vertex.neighbours;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn creation_and_empty_graph() {
-        let g: AdjMatrix<()> = AdjMatrix::new(GraphType::Undirected);
-        assert_eq!(g.vertices(), Vec::new());
-    }
-    #[test]
-    fn vertices() {
-        let mut g: AdjMatrix<()> = AdjMatrix::new(GraphType::Undirected);
-        let mut verts = Vec::new();
-        for _ in 0..5 {
-            verts.push(g.create_vertex());
-        }
-        assert_eq!(verts, g.vertices());
-    }
-    #[test]
-    fn get_weight_no_edge() {
-        let mut g: AdjMatrix<()> = AdjMatrix::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-    }
-    #[test]
-    fn get_weight_directed() {
-        let mut g: AdjMatrix<()> = AdjMatrix::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        //? Not equal because directed Graph
-        assert_ne!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-    }
-    #[test]
-    fn get_weight_undirected() {
-        let mut g: AdjMatrix<()> = AdjMatrix::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        //? Equal because undirected Graph
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-    }
-    #[test]
-    fn delete_edge_directed() {
-        let mut g: AdjMatrix<()> = AdjMatrix::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        assert_ne!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-        g.delete_edge(v1, v2).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
-    }
-    #[test]
-    fn delete_edge_undirected() {
-        let mut g: AdjMatrix<()> = AdjMatrix::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-        g.delete_edge(v1, v2).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
-    }
-    #[test]
-    fn delete_vertex() {
-        let mut g: AdjMatrix<()> = AdjMatrix::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        g.delete_vertex(v1).unwrap();
-        assert_eq!(g.get_weight(v1, v2), Err(GraphError::InvalidVertex));
-    }
-    #[test]
-    fn out_of_bounds() {
-        let mut g: AdjMatrix<()> = AdjMatrix::new(GraphType::Undirected);
-        let _ = g.create_vertex(); // 0
-        let v1 = g.create_vertex(); // 1
-        assert_eq!(g.get_weight(v1, VertexId(2)), Err(GraphError::InvalidVertex));
-    }
-}
+    //     // may fail if `to` is out of bounds
+    //     let edge: &mut Weight = neighbours.get_mut(to.0).ok_or(GraphError::InvalidVertex)?;
+    //     *edge = weight.into();
+    //     Ok(())
+    // }
+    // fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
+    //     let res1 = self._create_edge_directed(from, to, weight);
+    //     match self.graph_type() {
+    //         GraphType::Directed => res1,
+    //         GraphType::Undirected => {
+    //             res1.and_then(|_| self._create_edge_directed(to, from, weight))
+    //         }
+    //     }
+    // }
+    // fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+    //     self._create_edge_directed(from, to, Weight::Infinity)
+    // }
+    // fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+    //     self.create_edge(from, to, Weight::Infinity)
+    // }

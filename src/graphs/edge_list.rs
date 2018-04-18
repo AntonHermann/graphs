@@ -4,22 +4,16 @@ use std::collections::HashMap;
 pub struct EdgeList<T> {
     vertices: HashMap<VertexId, Option<T>>,
     edges: HashMap<VertexId, HashMap<VertexId, Weight>>,
-    graph_type: GraphType,
     vertice_next_id: usize,
 }
 
 impl<T> Graph<T> for EdgeList<T> {
-    fn new(graph_type: GraphType) -> Self {
+    fn new() -> Self {
         EdgeList {
             vertices: HashMap::new(),
             edges: HashMap::new(),
-            graph_type,
             vertice_next_id: 0,
         }
-    }
-
-    fn graph_type(&self) -> GraphType {
-        self.graph_type
     }
 
     fn vertices(&self) -> Vec<VertexId> {
@@ -45,33 +39,6 @@ impl<T> Graph<T> for EdgeList<T> {
     fn delete_vertex(&mut self, vertex: VertexId) -> Result<()> {
         self.vertices.remove(&vertex).ok_or(GraphError::InvalidVertex).map(|_| ())
     }
-    fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-        let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_insert_with(Default::default);
-        let edge: &mut Weight = neighbours.entry(to).or_insert_with(Default::default);
-        *edge = weight.into();
-        Ok(())
-    }
-    fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-        let res1 = self._create_edge_directed(from, to, weight);
-        match self.graph_type() {
-            GraphType::Directed => res1,
-            GraphType::Undirected => {
-                res1.and_then(|_| self._create_edge_directed(to, from, weight))
-            }
-        }
-    }
-    fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-        self.edges.get_mut(&from).and_then(|neighbours| neighbours.remove(&to));
-        Ok(())
-    }
-    fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-        if let GraphType::Directed = self.graph_type() {
-            self._delete_edge_directed(from, to)
-        } else {
-            self._delete_edge_directed(from, to)?;
-            self._delete_edge_directed(to, from)
-        }
-    }
     fn set_data(&mut self, vertex: VertexId, data: T) -> Result<()> {
         *self.vertices.entry(vertex).or_insert_with(Default::default) = Some(data);
         Ok(())
@@ -80,91 +47,30 @@ impl<T> Graph<T> for EdgeList<T> {
         self.vertices.get(&vertex).ok_or(GraphError::InvalidVertex).map(|e| e.as_ref())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn creation_and_empty_graph() {
-        let g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
-        assert_eq!(g.vertices(), Vec::new());
-    }
-    #[test]
-    fn vertices() {
-        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
-        let mut verts = Vec::new();
-        for _ in 0..5 {
-            verts.push(g.create_vertex());
-        }
-        let mut g_verts = g.vertices();
-        g_verts.sort_unstable_by_key(|v: &VertexId| v.0);
-        assert_eq!(verts, g_verts);
-    }
-    #[test]
-    fn get_weight_no_edge() {
-        let mut g: EdgeList<()> = EdgeList::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-    }
-    #[test]
-    fn get_weight_directed() {
-        let mut g: EdgeList<()> = EdgeList::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        //? Not equal because directed Graph
-        assert_ne!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-    }
-    #[test]
-    fn get_weight_undirected() {
-        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        //? Equal because undirected Graph
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-    }
-    #[test]
-    fn delete_edge_directed() {
-        let mut g: EdgeList<()> = EdgeList::new(GraphType::Directed);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        assert_ne!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-        g.delete_edge(v1, v2).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
-    }
-    #[test]
-    fn delete_edge_undirected() {
-        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::W(5));
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::W(5));
-        g.delete_edge(v1, v2).unwrap();
-        assert_eq!(g.get_weight(v1, v2).unwrap(), Weight::Infinity);
-        assert_eq!(g.get_weight(v2, v1).unwrap(), Weight::Infinity);
-    }
-    #[test]
-    fn delete_vertex() {
-        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
-        let v1 = g.create_vertex();
-        let v2 = g.create_vertex();
-        g.create_edge(v1, v2, Weight::W(5)).unwrap();
-        g.delete_vertex(v1).unwrap();
-        assert_eq!(g.get_weight(v1, v2), Err(GraphError::InvalidVertex));
-    }
-    #[test]
-    fn out_of_bounds() {
-        let mut g: EdgeList<()> = EdgeList::new(GraphType::Undirected);
-        let _ = g.create_vertex(); // 0
-        let v1 = g.create_vertex(); // 1
-        assert_eq!(g.get_weight(v1, VertexId(2)), Err(GraphError::InvalidVertex));
-    }
-}
+    // fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
+    //     let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_insert_with(Default::default);
+    //     let edge: &mut Weight = neighbours.entry(to).or_insert_with(Default::default);
+    //     *edge = weight.into();
+    //     Ok(())
+    // }
+    // fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
+    //     let res1 = self._create_edge_directed(from, to, weight);
+    //     match self.graph_type() {
+    //         GraphType::Directed => res1,
+    //         GraphType::Undirected => {
+    //             res1.and_then(|_| self._create_edge_directed(to, from, weight))
+    //         }
+    //     }
+    // }
+    // fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+    //     self.edges.get_mut(&from).and_then(|neighbours| neighbours.remove(&to));
+    //     Ok(())
+    // }
+    // fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+    //     if let GraphType::Directed = self.graph_type() {
+    //         self._delete_edge_directed(from, to)
+    //     } else {
+    //         self._delete_edge_directed(from, to)?;
+    //         self._delete_edge_directed(to, from)
+    //     }
+    // }
