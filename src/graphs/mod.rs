@@ -1,8 +1,10 @@
 #[macro_use]
 pub mod graph;
-pub mod adj_matrix;
-pub mod edge_list;
 pub mod adj_list;
+// TODO: Implement undirected/directed traits
+pub mod adj_matrix;
+// TODO: Implement undirected/directed traits
+pub mod edge_list;
 #[cfg(test)]
 mod tests;
 
