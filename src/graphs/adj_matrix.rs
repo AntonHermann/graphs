@@ -28,9 +28,15 @@ impl<T> Graph<T> for AdjMatrix<T> {
     }
 
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
-        let maybe_vertex: Option<&Vertex<T>> = self.vertices.get(from.0).ok_or(GraphError::InvalidVertex)?.as_ref();
+        let maybe_vertex: Option<&Vertex<T>> = self.vertices
+            .get(from.0)
+            .ok_or(GraphError::InvalidVertex)?
+            .as_ref();
         let vertex: &Vertex<T> = maybe_vertex.ok_or(GraphError::InvalidVertex)?;
-        let weight: &Weight = vertex.neighbours.get(to.0).ok_or(GraphError::InvalidVertex)?;
+        let weight: &Weight = vertex
+            .neighbours
+            .get(to.0)
+            .ok_or(GraphError::InvalidVertex)?;
         Ok(*weight)
     }
     fn create_vertex(&mut self) -> VertexId {
@@ -43,7 +49,6 @@ impl<T> Graph<T> for AdjMatrix<T> {
                 v.neighbours.push(unreachable_weight);
             }
         }
-
 
         // add new vertex:
         let new_vertex = {
@@ -59,51 +64,56 @@ impl<T> Graph<T> for AdjMatrix<T> {
         VertexId(new_vertex_id)
     }
     fn delete_vertex(&mut self, vertex: VertexId) -> Result<()> {
-        let maybe_vertex: &mut Option<Vertex<T>> =
-            self.vertices.get_mut(vertex.0).ok_or(GraphError::InvalidVertex)?;
+        let maybe_vertex: &mut Option<Vertex<T>> = self.vertices
+            .get_mut(vertex.0)
+            .ok_or(GraphError::InvalidVertex)?;
         *maybe_vertex = None;
         Ok(())
     }
     fn set_data(&mut self, vertex: VertexId, data: T) -> Result<()> {
-        let vertex_if_existent: Option<&mut Vertex<T>> = self.vertices.get_mut(vertex.0)
-            .ok_or(GraphError::InvalidVertex)?.as_mut();
+        let vertex_if_existent: Option<&mut Vertex<T>> = self.vertices
+            .get_mut(vertex.0)
+            .ok_or(GraphError::InvalidVertex)?
+            .as_mut();
         let vertex: &mut Vertex<T> = vertex_if_existent.ok_or(GraphError::InvalidVertex)?;
         let data_if_existent: Option<&mut T> = vertex.data.as_mut();
         data_if_existent.map(|dt: &mut T| *dt = data);
         Ok(())
     }
     fn get_data(&self, vertex: VertexId) -> Result<Option<&T>> {
-        let vertex_if_existent: Option<&Vertex<T>> = self.vertices.get(vertex.0)
-            .ok_or(GraphError::InvalidVertex)?.as_ref();
+        let vertex_if_existent: Option<&Vertex<T>> = self.vertices
+            .get(vertex.0)
+            .ok_or(GraphError::InvalidVertex)?
+            .as_ref();
         let vertex: &Vertex<T> = vertex_if_existent.ok_or(GraphError::InvalidVertex)?;
         Ok(vertex.data.as_ref())
     }
 }
-    // fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-    //     // may fail if `from` is out of bounds
-    //     let maybe_vertex: Option<&mut Vertex<T>> =
-    //         self.vertices.get_mut(from.0).ok_or(GraphError::InvalidVertex)?.as_mut();
-    //     // may fail if vertex has been deleted
-    //     let vertex: &mut Vertex<T> = maybe_vertex.ok_or(GraphError::InvalidVertex)?;
-    //     let neighbours: &mut Vec<Weight> = &mut vertex.neighbours;
+// fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
+//     // may fail if `from` is out of bounds
+//     let maybe_vertex: Option<&mut Vertex<T>> =
+//         self.vertices.get_mut(from.0).ok_or(GraphError::InvalidVertex)?.as_mut();
+//     // may fail if vertex has been deleted
+//     let vertex: &mut Vertex<T> = maybe_vertex.ok_or(GraphError::InvalidVertex)?;
+//     let neighbours: &mut Vec<Weight> = &mut vertex.neighbours;
 
-    //     // may fail if `to` is out of bounds
-    //     let edge: &mut Weight = neighbours.get_mut(to.0).ok_or(GraphError::InvalidVertex)?;
-    //     *edge = weight.into();
-    //     Ok(())
-    // }
-    // fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-    //     let res1 = self._create_edge_directed(from, to, weight);
-    //     match self.graph_type() {
-    //         GraphType::Directed => res1,
-    //         GraphType::Undirected => {
-    //             res1.and_then(|_| self._create_edge_directed(to, from, weight))
-    //         }
-    //     }
-    // }
-    // fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-    //     self._create_edge_directed(from, to, Weight::Infinity)
-    // }
-    // fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-    //     self.create_edge(from, to, Weight::Infinity)
-    // }
+//     // may fail if `to` is out of bounds
+//     let edge: &mut Weight = neighbours.get_mut(to.0).ok_or(GraphError::InvalidVertex)?;
+//     *edge = weight.into();
+//     Ok(())
+// }
+// fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
+//     let res1 = self._create_edge_directed(from, to, weight);
+//     match self.graph_type() {
+//         GraphType::Directed => res1,
+//         GraphType::Undirected => {
+//             res1.and_then(|_| self._create_edge_directed(to, from, weight))
+//         }
+//     }
+// }
+// fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+//     self._create_edge_directed(from, to, Weight::Infinity)
+// }
+// fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+//     self.create_edge(from, to, Weight::Infinity)
+// }

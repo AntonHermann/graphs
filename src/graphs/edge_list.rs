@@ -25,9 +25,12 @@ impl<T> Graph<T> for EdgeList<T> {
 
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
         if !self.vertices.contains_key(&from) || !self.vertices.contains_key(&to) {
-            return Err(GraphError::InvalidVertex)
+            return Err(GraphError::InvalidVertex);
         }
-        Ok(self.edges.get(&from).and_then(|neighbours| neighbours.get(&to).map(|w| *w)).unwrap_or_default())
+        Ok(self.edges
+            .get(&from)
+            .and_then(|neighbours| neighbours.get(&to).map(|w| *w))
+            .unwrap_or_default())
     }
     fn create_vertex(&mut self) -> VertexId {
         let new_id = VertexId(self.vertice_next_id);
@@ -37,40 +40,46 @@ impl<T> Graph<T> for EdgeList<T> {
     }
 
     fn delete_vertex(&mut self, vertex: VertexId) -> Result<()> {
-        self.vertices.remove(&vertex).ok_or(GraphError::InvalidVertex).map(|_| ())
+        self.vertices
+            .remove(&vertex)
+            .ok_or(GraphError::InvalidVertex)
+            .map(|_| ())
     }
     fn set_data(&mut self, vertex: VertexId, data: T) -> Result<()> {
         *self.vertices.entry(vertex).or_insert_with(Default::default) = Some(data);
         Ok(())
     }
     fn get_data(&self, vertex: VertexId) -> Result<Option<&T>> {
-        self.vertices.get(&vertex).ok_or(GraphError::InvalidVertex).map(|e| e.as_ref())
+        self.vertices
+            .get(&vertex)
+            .ok_or(GraphError::InvalidVertex)
+            .map(|e| e.as_ref())
     }
 }
-    // fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-    //     let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_insert_with(Default::default);
-    //     let edge: &mut Weight = neighbours.entry(to).or_insert_with(Default::default);
-    //     *edge = weight.into();
-    //     Ok(())
-    // }
-    // fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
-    //     let res1 = self._create_edge_directed(from, to, weight);
-    //     match self.graph_type() {
-    //         GraphType::Directed => res1,
-    //         GraphType::Undirected => {
-    //             res1.and_then(|_| self._create_edge_directed(to, from, weight))
-    //         }
-    //     }
-    // }
-    // fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-    //     self.edges.get_mut(&from).and_then(|neighbours| neighbours.remove(&to));
-    //     Ok(())
-    // }
-    // fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
-    //     if let GraphType::Directed = self.graph_type() {
-    //         self._delete_edge_directed(from, to)
-    //     } else {
-    //         self._delete_edge_directed(from, to)?;
-    //         self._delete_edge_directed(to, from)
-    //     }
-    // }
+// fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
+//     let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_insert_with(Default::default);
+//     let edge: &mut Weight = neighbours.entry(to).or_insert_with(Default::default);
+//     *edge = weight.into();
+//     Ok(())
+// }
+// fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
+//     let res1 = self._create_edge_directed(from, to, weight);
+//     match self.graph_type() {
+//         GraphType::Directed => res1,
+//         GraphType::Undirected => {
+//             res1.and_then(|_| self._create_edge_directed(to, from, weight))
+//         }
+//     }
+// }
+// fn _delete_edge_directed(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+//     self.edges.get_mut(&from).and_then(|neighbours| neighbours.remove(&to));
+//     Ok(())
+// }
+// fn delete_edge(&mut self, from: VertexId, to: VertexId) -> Result<()> {
+//     if let GraphType::Directed = self.graph_type() {
+//         self._delete_edge_directed(from, to)
+//     } else {
+//         self._delete_edge_directed(from, to)?;
+//         self._delete_edge_directed(to, from)
+//     }
+// }

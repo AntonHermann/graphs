@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use std::result::Result as stdResult;
 use std::cmp::Ordering;
+use std::result::Result as stdResult;
 
 /// The weight of an edge
 /// Infinity if the edge doesn't exist (yet)
@@ -11,7 +11,9 @@ pub enum Weight {
     W(usize),
 }
 impl Default for Weight {
-    fn default() -> Self { Weight::Infinity }
+    fn default() -> Self {
+        Weight::Infinity
+    }
 }
 impl PartialOrd for Weight {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -21,9 +23,9 @@ impl PartialOrd for Weight {
 impl Ord for Weight {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (&Weight::Infinity , &Weight::Infinity  ) => Ordering::Equal,
-            (_                 , &Weight::Infinity  ) => Ordering::Less,
-            (&Weight::Infinity , _                  ) => Ordering::Greater,
+            (&Weight::Infinity, &Weight::Infinity) => Ordering::Equal,
+            (_, &Weight::Infinity) => Ordering::Less,
+            (&Weight::Infinity, _) => Ordering::Greater,
             (&Weight::W(w_self), &Weight::W(w_other)) => w_self.cmp(&w_other),
         }
     }
@@ -118,7 +120,12 @@ pub trait UndirectionedGraph<T>: Graph<T> {
     /// Creates a new edge.
     ///
     /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
-    fn create_undirected_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()>;
+    fn create_undirected_edge(
+        &mut self,
+        from: VertexId,
+        to: VertexId,
+        weight: Weight,
+    ) -> Result<()>;
 
     /// Deletes an edge.
     ///

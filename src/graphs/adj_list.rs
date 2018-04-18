@@ -27,9 +27,14 @@ impl<T> Graph<T> for AdjList<T> {
 
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
         let vertex: &Vertex<T> = unwrap_vertex!(self.vertices.get(&from));
-        if !self.vertices.contains_key(&to) { return Err(GraphError::InvalidVertex) }
+        if !self.vertices.contains_key(&to) {
+            return Err(GraphError::InvalidVertex);
+        }
         let adj_verts: &AdjacentVertices = &vertex.0;
-        let &(_, weight) = unwrap_vertex!(adj_verts.iter().find(|&(v,_)| v == &to), Ok(Weight::Infinity));
+        let &(_, weight) = unwrap_vertex!(
+            adj_verts.iter().find(|&(v, _)| v == &to),
+            Ok(Weight::Infinity)
+        );
         Ok(weight)
     }
     fn create_vertex(&mut self) -> VertexId {
@@ -78,10 +83,15 @@ impl<T> DirectedGraph<T> for AdjList<T> {
         Ok(self.vertices.iter().filter_map(is_incoming).collect())
     }
     fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
-        self.vertices.iter().flat_map(|(from, v): (&VertexId, &Vertex<T>)| {
-            let adj_vertices: &AdjacentVertices = &v.0;
-            adj_vertices.iter().map(move |&(to, weight): &(VertexId, Weight)| (*from, to, weight))
-        }).collect()
+        self.vertices
+            .iter()
+            .flat_map(|(from, v): (&VertexId, &Vertex<T>)| {
+                let adj_vertices: &AdjacentVertices = &v.0;
+                adj_vertices
+                    .iter()
+                    .map(move |&(to, weight): &(VertexId, Weight)| (*from, to, weight))
+            })
+            .collect()
     }
     fn create_directed_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
         let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));
@@ -123,7 +133,8 @@ impl<T> UndirectionedGraph<T> for AdjList<T> {
 }
 
 fn vector_update<A, P>(vector: &mut Vec<A>, predicate: P, el: A)
-    where P: Fn(&A) -> bool,
+where
+    P: Fn(&A) -> bool,
 {
     for v in vector.iter_mut() {
         if predicate(v) {
@@ -137,17 +148,17 @@ fn vector_update<A, P>(vector: &mut Vec<A>, predicate: P, el: A)
 
 #[test]
 fn test_vector_update() {
-    let v1 = vec![0,1,2,3,4,5];
+    let v1 = vec![0, 1, 2, 3, 4, 5];
 
     let mut v2 = v1.clone();
     vector_update(&mut v2, |x| x == &3, 9);
-    assert_eq!(v2, vec![0,1,2,9,4,5], "update");
+    assert_eq!(v2, vec![0, 1, 2, 9, 4, 5], "update");
 
     let mut v3 = v1.clone();
     vector_update(&mut v3, |_| false, 9);
-    assert_eq!(v3, vec![0,1,2,3,4,5,9], "append");
+    assert_eq!(v3, vec![0, 1, 2, 3, 4, 5, 9], "append");
 
     let mut v4 = v1.clone();
     vector_update(&mut v4, |_| true, 9);
-    assert_eq!(v4, vec![9,1,2,3,4,5], "update only once");
+    assert_eq!(v4, vec![9, 1, 2, 3, 4, 5], "update only once");
 }

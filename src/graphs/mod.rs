@@ -8,7 +8,7 @@ pub mod edge_list;
 #[cfg(test)]
 mod tests;
 
-pub use self::graph::*;
 pub use self::adj_list::AdjList;
 pub use self::adj_matrix::AdjMatrix;
 pub use self::edge_list::EdgeList;
+pub use self::graph::*;
