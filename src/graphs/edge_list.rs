@@ -45,13 +45,13 @@ impl<T> Graph<T> for EdgeList<T> {
     fn delete_vertex(&mut self, vertex: VertexId) -> Result<()> {
         self.vertices.remove(&vertex).ok_or(GraphError::InvalidVertex).map(|_| ())
     }
-    fn _create_edge_directed(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
+    fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
         let neighbours: &mut HashMap<VertexId, Weight> = self.edges.entry(from).or_insert_with(Default::default);
         let edge: &mut Weight = neighbours.entry(to).or_insert_with(Default::default);
-        *edge = weight;
+        *edge = weight.into();
         Ok(())
     }
-    fn create_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
+    fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
         let res1 = self._create_edge_directed(from, to, weight);
         match self.graph_type() {
             GraphType::Directed => res1,

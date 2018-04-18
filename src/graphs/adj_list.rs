@@ -53,17 +53,17 @@ impl<T> Graph<T> for AdjList<T> {
         }
         Ok(())
     }
-    fn _create_edge_directed(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
+    fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
         let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));
         let adj_verts: &mut AdjacentVertices = &mut vertex.0;
         if let Some((_, ref mut w)) = adj_verts.iter_mut().find(|(v, _)| v == &to) {
-            *w = weight;
+            *w = weight.into();
             return Ok(());
         }
-        adj_verts.push((to, weight));
+        adj_verts.push((to, weight.into()));
         Ok(())
     }
-    fn create_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
+    fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
         let res1 = self._create_edge_directed(from, to, weight);
         match self.graph_type() {
             GraphType::Directed => res1,
@@ -185,5 +185,12 @@ mod tests {
         let _ = g.create_vertex(); // 0
         let v1 = g.create_vertex(); // 1
         assert_eq!(g.get_weight(v1, VertexId(2)), Err(GraphError::InvalidVertex));
+    }
+    #[test]
+    fn weight_converstion() {
+        let mut g: AdjList<()> = AdjList::new(GraphType::Directed);
+        let v1 = g.create_vertex();
+        let v2 = g.create_vertex();
+        g.create_edge(v1, v2, 5).unwrap();
     }
 }

@@ -1,14 +1,37 @@
+#![allow(dead_code)]
+
 use std::result::Result as stdResult;
+use std::cmp::Ordering;
 
 /// The weight of an edge
 /// Infinity if the edge doesn't exist (yet)
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Weight {
     Infinity,
     W(usize),
 }
 impl Default for Weight {
     fn default() -> Self { Weight::Infinity }
+}
+impl PartialOrd for Weight {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for Weight {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Weight::Infinity, Weight::Infinity) => Ordering::Equal,
+            (_, Weight::Infinity) => Ordering::Less,
+            (Weight::Infinity, _) => Ordering::Greater,
+            (Weight::W(w_self), Weight::W(w_other)) => w_self.cmp(w_other),
+        }
+    }
+}
+impl From<usize> for Weight {
+    fn from(w: usize) -> Weight {
+        Weight::W(w)
+    }
 }
 
 /// The type of a `Graph`
@@ -79,12 +102,12 @@ pub trait Graph<T> {
     /// types correctly. This method is only an internal helper
     ///
     /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
-    fn _create_edge_directed(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()>;
+    fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()>;
 
     /// Creates a new edge.
     ///
     /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
-    fn create_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()>;
+    fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()>;
 
     /// Creates a directed edge.
     /// Prefer using `Graph::delete_edge()` since it handles the different graph

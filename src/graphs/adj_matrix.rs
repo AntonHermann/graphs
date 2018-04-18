@@ -70,7 +70,7 @@ impl<T> Graph<T> for AdjMatrix<T> {
         *maybe_vertex = None;
         Ok(())
     }
-    fn _create_edge_directed(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
+    fn _create_edge_directed<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
         // may fail if `from` is out of bounds
         let maybe_vertex: Option<&mut Vertex<T>> =
             self.vertices.get_mut(from.0).ok_or(GraphError::InvalidVertex)?.as_mut();
@@ -80,10 +80,10 @@ impl<T> Graph<T> for AdjMatrix<T> {
 
         // may fail if `to` is out of bounds
         let edge: &mut Weight = neighbours.get_mut(to.0).ok_or(GraphError::InvalidVertex)?;
-        *edge = weight;
+        *edge = weight.into();
         Ok(())
     }
-    fn create_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
+    fn create_edge<W: Into<Weight> + Copy>(&mut self, from: VertexId, to: VertexId, weight: W) -> Result<()> {
         let res1 = self._create_edge_directed(from, to, weight);
         match self.graph_type() {
             GraphType::Directed => res1,
