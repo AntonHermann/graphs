@@ -74,6 +74,9 @@ pub trait Graph<T> {
     /// Returns a Vector containing all vertices
     fn vertices(&self) -> Vec<VertexId>;
 
+    /// Returns a Vector containing all edges as (from, to, weight) tuple
+    fn edges(&self) -> Vec<(VertexId, VertexId, Weight)>;
+
     /// Returns the `Weight` of a specific edge.
     ///
     /// Returns Weight::Infinity if the edge doesn't exist
@@ -104,7 +107,6 @@ pub trait Graph<T> {
 pub trait DirectedGraph<T>: Graph<T> {
     fn outgoing_edges(&self, vertex: VertexId) -> Result<Vec<(VertexId, Weight)>>;
     fn incoming_edges(&self, vertex: VertexId) -> Result<Vec<(VertexId, Weight)>>;
-    fn edges(&self) -> Vec<(VertexId, VertexId, Weight)>;
 
     /// Creates a new edge.
     ///

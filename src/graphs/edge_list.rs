@@ -23,6 +23,14 @@ impl<T> Graph<T> for EdgeList<T> {
         collected
     }
 
+    fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
+        self.edges.iter().flat_map(|(from, neighbours)| {
+            neighbours.iter().map(move |(to, weight)| {
+                (*from, *to, *weight)
+            })
+        }).collect()
+    }
+
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
         if !self.vertices.contains_key(&from) || !self.vertices.contains_key(&to) {
             return Err(GraphError::InvalidVertex);

@@ -25,6 +25,18 @@ impl<T> Graph<T> for AdjList<T> {
         collected
     }
 
+    fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
+        self.vertices
+            .iter()
+            .flat_map(|(from, v): (&VertexId, &Vertex<T>)| {
+                let adj_vertices: &AdjacentVertices = &v.0;
+                adj_vertices
+                    .iter()
+                    .map(move |&(to, weight): &(VertexId, Weight)| (*from, to, weight))
+            })
+            .collect()
+    }
+
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
         let vertex: &Vertex<T> = unwrap_vertex!(self.vertices.get(&from));
         if !self.vertices.contains_key(&to) {
@@ -81,17 +93,6 @@ impl<T> DirectedGraph<T> for AdjList<T> {
             maybe_weight.map(|weight| (*from, *weight))
         };
         Ok(self.vertices.iter().filter_map(is_incoming).collect())
-    }
-    fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
-        self.vertices
-            .iter()
-            .flat_map(|(from, v): (&VertexId, &Vertex<T>)| {
-                let adj_vertices: &AdjacentVertices = &v.0;
-                adj_vertices
-                    .iter()
-                    .map(move |&(to, weight): &(VertexId, Weight)| (*from, to, weight))
-            })
-            .collect()
     }
     fn create_directed_edge(&mut self, from: VertexId, to: VertexId, weight: Weight) -> Result<()> {
         let vertex: &mut Vertex<T> = unwrap_vertex!(self.vertices.get_mut(&from));

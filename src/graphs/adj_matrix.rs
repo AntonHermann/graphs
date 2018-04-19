@@ -1,5 +1,6 @@
 use graphs::graph::*;
 
+#[derive(Clone)]
 struct Vertex<T> {
     data: Option<T>,
     neighbours: Vec<Weight>,
@@ -25,6 +26,17 @@ impl<T> Graph<T> for AdjMatrix<T> {
         let mapped = filtered.map(|(i, _)| VertexId(i));
         let collected: Vec<VertexId> = mapped.collect();
         collected
+    }
+
+    fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
+        self.vertices.iter().enumerate().filter_map(|(from, maybe_vertex)|{
+            maybe_vertex.as_ref().map(|vertex| (from, vertex))
+        }).flat_map(|(from, vertex): (usize, &Vertex<T>)| {
+            let neighbours: &Vec<Weight> = &vertex.neighbours;
+            neighbours.iter().enumerate().map(move |(to, weight)| {
+                (VertexId(from), VertexId(to), *weight)
+            })
+        }).collect()
     }
 
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
