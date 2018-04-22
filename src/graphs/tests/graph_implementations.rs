@@ -8,6 +8,7 @@ macro_rules! make_test {
         fn $name() {
             $(
             {
+                #[allow(unused_mut)]
                 let mut $g: $x<()> = $x::new();
                 $t
             }
