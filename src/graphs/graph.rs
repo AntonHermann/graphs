@@ -30,11 +30,6 @@ impl Ord for Weight {
         }
     }
 }
-impl From<usize> for Weight {
-    fn from(w: usize) -> Weight {
-        Weight::W(w)
-    }
-}
 
 /// The error type used in `Graph`
 /// May get expanded later to cover other error cases
