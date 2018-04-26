@@ -80,6 +80,14 @@ pub trait Graph<T> {
     /// Creates a new vertex with data and returns a handle to it.
     fn create_vertex(&mut self, data: Option<T>) -> VertexId;
 
+    /// Creates new vertices and returns handles to them.
+    fn create_vertices(&mut self, datas: Vec<Option<T>>) -> Vec<VertexId> {
+        datas
+            .into_iter()
+            .map(|data| self.create_vertex(data))
+            .collect()
+    }
+
     /// Delete a vertex.
     ///
     /// Returns Err(GraphError::InvalidVertex) if this vector didn't exist
