@@ -26,11 +26,14 @@ impl<T> Graph<T> for EdgeList<T> {
     }
 
     fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
-        self.edges.iter().flat_map(|(from, neighbours)| {
-            neighbours.iter().map(move |(to, weight)| {
-                (*from, *to, *weight)
+        self.edges
+            .iter()
+            .flat_map(|(from, neighbours)| {
+                neighbours
+                    .iter()
+                    .map(move |(to, weight)| (*from, *to, *weight))
             })
-        }).collect()
+            .collect()
     }
 
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {

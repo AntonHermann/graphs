@@ -31,14 +31,18 @@ impl<T> Graph<T> for AdjMatrix<T> {
     }
 
     fn edges(&self) -> Vec<(VertexId, VertexId, Weight)> {
-        self.vertices.iter().enumerate().filter_map(|(from, maybe_vertex)|{
-            maybe_vertex.as_ref().map(|vertex| (from, vertex))
-        }).flat_map(|(from, vertex): (usize, &Vertex<T>)| {
+        self.vertices
+            .iter()
+            .enumerate()
+            .filter_map(|(from, maybe_vertex)| maybe_vertex.as_ref().map(|vertex| (from, vertex)))
+            .flat_map(|(from, vertex): (usize, &Vertex<T>)| {
             let neighbours: &Vec<Weight> = &vertex.neighbours;
-            neighbours.iter().enumerate().map(move |(to, weight)| {
-                (VertexId(from), VertexId(to), *weight)
+                neighbours
+                    .iter()
+                    .enumerate()
+                    .map(move |(to, weight)| (VertexId(from), VertexId(to), *weight))
             })
-        }).collect()
+            .collect()
     }
 
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight> {
@@ -56,7 +60,6 @@ impl<T> Graph<T> for AdjMatrix<T> {
     fn create_vertex(&mut self, data: Option<T>) -> VertexId {
         let new_vertex_id = self.vertices.len();
         // update existing vertices:
-        let unreachable_weight = Weight::Infinity;
         for vert in self.vertices.iter_mut() {
             if let Some(v) = vert {
                 // vertex not deleted: push new weight
