@@ -10,14 +10,16 @@ pub struct AdjList<T> {
     vertice_next_id: usize,
 }
 
-impl<T> Graph<T> for AdjList<T> {
-    fn new() -> Self {
+impl<T> AdjList<T> {
+    pub fn new() -> Self {
         AdjList {
             vertices: HashMap::new(),
             vertice_next_id: 0,
         }
     }
+}
 
+impl<T> Graph<T> for AdjList<T> {
     fn vertices(&self) -> Vec<VertexId> {
         use std::collections::hash_map::Keys;
         let keys: Keys<VertexId, _> = self.vertices.keys();

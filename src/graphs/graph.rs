@@ -60,11 +60,11 @@ pub type Result<T> = stdResult<T, GraphError>;
 /// Abstract data type Graph (collection of Vertices and Edges)
 /// T: Type of data objects stored in the vertices
 pub trait Graph<T> {
-    /// Creates an empty `Graph`.
-    ///
-    /// The Graph is initially created with a capacity of 0, so it will not
-    /// allocate until it is first inserted into.
-    fn new() -> Self;
+    // /// Creates an empty `Graph`.
+    // ///
+    // /// The Graph is initially created with a capacity of 0, so it will not
+    // /// allocate until it is first inserted into.
+    // fn new() -> Self;
 
     /// Returns a Vector containing all vertices
     fn vertices(&self) -> Vec<VertexId>;

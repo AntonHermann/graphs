@@ -11,13 +11,15 @@ pub struct AdjMatrix<T> {
     vertices: Vec<Option<Vertex<T>>>,
 }
 
-impl<T> Graph<T> for AdjMatrix<T> {
-    fn new() -> Self {
+impl<T> AdjMatrix<T> {
+    pub fn new() -> Self {
         AdjMatrix {
             vertices: Vec::with_capacity(10),
         }
     }
+}
 
+impl<T> Graph<T> for AdjMatrix<T> {
     fn vertices(&self) -> Vec<VertexId> {
         use std::slice::Iter;
         let iter: Iter<_> = self.vertices.iter();

@@ -7,15 +7,17 @@ pub struct EdgeList<T> {
     vertice_next_id: usize,
 }
 
-impl<T> Graph<T> for EdgeList<T> {
-    fn new() -> Self {
+impl<T> EdgeList<T> {
+    pub fn new() -> Self {
         EdgeList {
             vertices: HashMap::new(),
             edges: HashMap::new(),
             vertice_next_id: 0,
         }
     }
+}
 
+impl<T> Graph<T> for EdgeList<T> {
     fn vertices(&self) -> Vec<VertexId> {
         use std::collections::hash_map::Keys;
         let keys: Keys<VertexId, _> = self.vertices.keys();
