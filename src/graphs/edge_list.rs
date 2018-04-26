@@ -42,10 +42,10 @@ impl<T> Graph<T> for EdgeList<T> {
             .and_then(|neighbours| neighbours.get(&to).map(|w| *w))
             .unwrap_or_default())
     }
-    fn create_vertex(&mut self) -> VertexId {
+    fn create_vertex(&mut self, data: Option<T>) -> VertexId {
         let new_id = VertexId(self.vertice_next_id);
         self.vertice_next_id += 1;
-        self.vertices.insert(new_id, None);
+        self.vertices.insert(new_id, data);
         new_id
     }
 

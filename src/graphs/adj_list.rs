@@ -51,11 +51,10 @@ impl<T> Graph<T> for AdjList<T> {
         );
         Ok(weight)
     }
-    fn create_vertex(&mut self) -> VertexId {
+    fn create_vertex(&mut self, data: Option<T>) -> VertexId {
         let new_id = VertexId(self.vertice_next_id);
         self.vertice_next_id += 1;
-        // self.vertices.insert(new_id, (Vec::new(), None));
-        self.vertices.insert(new_id, Default::default());
+        self.vertices.insert(new_id, (Vec::new(), data));
         new_id
     }
 

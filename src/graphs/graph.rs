@@ -77,8 +77,8 @@ pub trait Graph<T> {
     /// Returns Weight::Infinity if the edge doesn't exist
     fn get_weight(&self, from: VertexId, to: VertexId) -> Result<Weight>;
 
-    /// Creates a new vertex and returns a handle to it.
-    fn create_vertex(&mut self) -> VertexId;
+    /// Creates a new vertex with data and returns a handle to it.
+    fn create_vertex(&mut self, data: Option<T>) -> VertexId;
 
     /// Delete a vertex.
     ///

@@ -53,14 +53,14 @@ impl<T> Graph<T> for AdjMatrix<T> {
             .ok_or(GraphError::InvalidVertex)?;
         Ok(*weight)
     }
-    fn create_vertex(&mut self) -> VertexId {
+    fn create_vertex(&mut self, data: Option<T>) -> VertexId {
         let new_vertex_id = self.vertices.len();
         // update existing vertices:
         let unreachable_weight = Weight::Infinity;
         for vert in self.vertices.iter_mut() {
             if let Some(v) = vert {
                 // vertex not deleted: push new weight
-                v.neighbours.push(unreachable_weight);
+                v.neighbours.push(Weight::Infinity);
             }
         }
 
@@ -70,7 +70,7 @@ impl<T> Graph<T> for AdjMatrix<T> {
             // set last element (new vertex) weight to 0
             new_edges[new_vertex_id] = Weight::W(0);
             Vertex {
-                data: None,
+                data,
                 neighbours: new_edges,
             }
         };
