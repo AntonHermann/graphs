@@ -130,22 +130,13 @@ pub trait DirectedGraph<T>: Graph<T> {
     /// Returns Err(GraphError::InvalidVertex) if one of the vectors doesn't exist
     fn delete_directed_edge(&mut self, from: VertexId, to: VertexId) -> Result<()>;
 }
-pub trait UndirectionedGraph<T>: Graph<T> {
+pub trait UndirectionedGraph<T>: DirectedGraph<T> {
     /// Creates a new edge.
     ///
     /// Returns Err(GraphError::InvalidVertex) if one of the vectices doesn't exist
     fn create_undirected_edge(
         &mut self,
-        from: VertexId,
-        to: VertexId,
-        weight: Weight,
-    ) -> Result<()>;
-
-    /// Deletes an edge.
-    ///
-    /// Returns Err(GraphError::InvalidVertex) if one of the vectors doesn't exist
-    fn delete_undirected_edge(&mut self, from: VertexId, to: VertexId) -> Result<()>;
-}
+        v1: VertexId,
         v2: VertexId,
         weight: Weight,
     ) -> Result<()> {
