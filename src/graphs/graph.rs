@@ -2,6 +2,7 @@
 
 use std::cmp::Ordering;
 use std::result::Result as stdResult;
+use std::fmt;
 
 /// The weight of an edge
 /// Infinity if the edge doesn't exist (yet)
@@ -27,6 +28,14 @@ impl Ord for Weight {
             (_, &Weight::Infinity) => Ordering::Less,
             (&Weight::Infinity, _) => Ordering::Greater,
             (&Weight::W(w_self), &Weight::W(w_other)) => w_self.cmp(&w_other),
+        }
+    }
+}
+impl fmt::Display for Weight {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Weight::W(val) => write!(f, "{}", val),
+            Weight::Infinity => write!(f, "inf"),
         }
     }
 }
@@ -136,4 +145,64 @@ pub trait UndirectionedGraph<T>: Graph<T> {
     ///
     /// Returns Err(GraphError::InvalidVertex) if one of the vectors doesn't exist
     fn delete_undirected_edge(&mut self, from: VertexId, to: VertexId) -> Result<()>;
+}
+        v2: VertexId,
+        weight: Weight,
+    ) -> Result<()> {
+        self.create_directed_edge(v1, v2, weight)?;
+        self.create_directed_edge(v2, v1, weight)
+    }
+
+    /// Deletes an edge.
+    ///
+    /// Returns Err(GraphError::InvalidVertex) if one of the vectors doesn't exist
+    fn delete_undirected_edge(&mut self, v1: VertexId, v2: VertexId) -> Result<()> {
+        self.delete_directed_edge(v1, v2)?;
+        self.delete_directed_edge(v2, v1)
+    }
+}
+// not entirely sure about this design decision, may be removed later
+// to allow implementations to implement more efficient solutions for
+// implementing undirected graphs
+impl<T, G: DirectedGraph<T>> UndirectionedGraph<T> for G {}
+
+//* currently not possible in rust
+// impl<T: !fmt::Display> fmt::Display for Graph<T> {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         let verts = self.vertices();
+//         write!(f, "V: ")?;
+//         for v in verts {
+//             write!(f, "{}, ", v.0)?;
+//         }
+//         writeln!(f)?;
+//         let edges = self.edges();
+//         write!(f, "E: ")?;
+//         for (from, to, weight) in edges {
+//             write!(f, "{} => {} ({}), ", from.0, to.0, weight)?;
+//         }
+//         Ok(())
+//     }
+// }
+
+impl<T: fmt::Display> fmt::Display for Graph<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let verts = self.vertices();
+        write!(f, "V: ")?;
+        for v in verts {
+            let data = self.get_data(v).unwrap();
+            if let Some(d) = data {
+                write!(f, "{}: {}, ", v.0, d)?;
+            } else {
+                write!(f, "{}, ", v.0)?;
+            }
+        }
+        writeln!(f)?;
+        let edges = self.edges();
+        write!(f, "E: ")?;
+        for (from, to, weight) in edges {
+            write!(f, "{} => {} ({}), ", from.0, to.0, weight)?;
+        }
+        // edges(&self) -> Vec<(VertexId, VertexId, Weight)>;
+        Ok(())
+    }
 }
