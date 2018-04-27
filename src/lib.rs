@@ -1,3 +1,11 @@
-// #![feature(associated_type_defaults, entry_or_default)]
+#[macro_use]
+mod graph;
+mod adj_list;
 
-pub mod graphs;
+#[cfg(test)]
+mod tests;
+
+pub mod algorithms;
+
+pub use self::adj_list::AdjList;
+pub use self::graph::*;

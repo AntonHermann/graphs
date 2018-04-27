@@ -1,4 +1,4 @@
-use graphs::graph::*;
+use graph::*;
 use std::collections::HashMap;
 
 type Data<T> = Option<T>;

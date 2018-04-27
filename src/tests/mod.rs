@@ -1,6 +1,6 @@
 pub mod graph_implementations;
 
-use graphs::*;
+use graph::*;
 
 #[test]
 fn test_weight_order() {

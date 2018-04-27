@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-use graphs::*;
+use adj_list::AdjList;
+use graph::*;
 
 macro_rules! make_test {
     (($($x:ident),*) fn $name:ident($g:ident<$type:ty>) $t:tt) => {
@@ -16,7 +17,8 @@ macro_rules! make_test {
         }
     };
     (fn $name:ident($g:ident<$type:ty>) $t:tt) => {
-        make_test!((AdjList, AdjMatrix, EdgeList) fn $name($g<$type>) $t);
+        // make_test!((AdjList, AdjMatrix, EdgeList) fn $name($g<$type>) $t);
+        make_test!((AdjList) fn $name($g<$type>) $t);
     };
     (($($x:ident),*) fn $name:ident($g:ident) $t:tt) => {
         make_test!(($($x),*) fn $name($g<()>) $t);
