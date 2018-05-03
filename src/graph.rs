@@ -1,8 +1,9 @@
 use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, Range};
 use std::slice;
+use std::cmp;
 
 use Direction::{Incoming, Outgoing};
 
@@ -10,7 +11,9 @@ use Direction::{Incoming, Outgoing};
 /// Edge direction
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Direction {
+    /// Edges from a node.
     Outgoing = 0,
+    /// Edges to a node.
     Incoming = 1,
 }
 impl Direction {
@@ -38,6 +41,7 @@ pub struct Directed;
 pub struct Undirected;
 /// Edge type: determines whether a graph has directed edges or not
 pub trait EdgeType {
+    /// whether the graph has directed edges or not
     fn is_directed() -> bool;
 }
 impl EdgeType for Directed {
@@ -56,7 +60,9 @@ impl EdgeType for Undirected {
 ///
 /// For `Graph::from_edges`
 pub trait IntoWeightedEdge<E> {
+    /// The node-ID type (Ix)
     type NodeId;
+    /// Transform the tuple to a valid (source, target, weight) triple.
     fn into_weighted_edge(self) -> (Self::NodeId, Self::NodeId, E);
 }
 impl<E, Ix> IntoWeightedEdge<E> for (Ix, Ix)
@@ -108,7 +114,7 @@ enum Pair<T> {
     Both(T, T),
 }
 fn index_twice<T>(slc: &mut [T], a: usize, b: usize) -> Pair<&mut T> {
-    if ::std::cmp::max(a, b) >= slc.len() {
+    if cmp::max(a, b) >= slc.len() {
         Pair::None
     } else if a == b {
         Pair::One(&mut slc[a])
@@ -140,8 +146,11 @@ pub type DefaultIx = u32;
 
 /// Trait for the unsigned integer type used for node and edge indices
 pub trait IndexType: Copy + Default + Ord + fmt::Debug + 'static {
+    /// Construct a new `IndexType` from an `usize`.
     fn new(x: usize) -> Self;
+    /// Index for internal data structure access.
     fn index(&self) -> usize;
+    /// The types max-value
     fn max() -> Self;
 }
 macro_rules! impl_index_type {
@@ -171,12 +180,16 @@ impl_index_type!(u8);
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodeIndex<Ix = DefaultIx>(Ix);
 impl<Ix: IndexType> NodeIndex<Ix> {
+    /// Construct a new `NodeIndex`.
     pub fn new(x: usize) -> Self {
         NodeIndex(IndexType::new(x))
     }
+    /// Internal index (edge-endpoints and directions are internally
+    /// represented as 2-ary arrays
     pub fn index(self) -> usize {
         self.0.index()
     }
+    /// Represents an invalid `NodeIndex`
     pub fn end() -> Self {
         NodeIndex(IndexType::max())
     }
@@ -189,9 +202,12 @@ impl<Ix: IndexType> NodeIndex<Ix> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct EdgeIndex<Ix = DefaultIx>(Ix);
 impl<Ix: IndexType> EdgeIndex<Ix> {
+    /// Construct a new `EdgeIndex`.
     pub fn new(x: usize) -> Self {
         EdgeIndex(IndexType::new(x))
     }
+    /// Internal index (edge-endpoints and directions are internally
+    /// represented as 2-ary arrays
     pub fn index(self) -> usize {
         self.0.index()
     }
@@ -214,6 +230,8 @@ pub struct Node<N, Ix = DefaultIx> {
     next: [EdgeIndex<Ix>; 2],
 }
 impl<N, Ix: IndexType> Node<N, Ix> {
+    /// Accessor for data structure internals:
+    /// the first edge in the given direction.
     pub fn next_edge(&self, dir: Direction) -> EdgeIndex<Ix> {
         self.next[dir.index()]
     }
@@ -230,7 +248,7 @@ where
         }
     }
 }
-pub type NodeList<N, Ix> = Vec<Node<N, Ix>>;
+type NodeList<N, Ix> = Vec<Node<N, Ix>>;
 
 /// The graph's edge type.
 #[derive(Debug)]
@@ -269,7 +287,8 @@ where
         }
     }
 }
-pub type EdgeList<E, Ix> = Vec<Edge<E, Ix>>;
+
+type EdgeList<E, Ix> = Vec<Edge<E, Ix>>;
 
 /// `Graph<N, E, Ty, Ix>` is a graph datastructure using an adjacency list representation
 ///
@@ -833,10 +852,46 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
             ty: PhantomData,
         }
     }
-    // pub fn node_weights_mut(&mut self) -> NodeWeightsMut<N, Ix> {}
-    // pub fn edge_indices(&self) -> EdgeIndices<Ix> {}
-    // pub fn edge_references(&self) -> EdgeReferences<E, Ix> {}
-    // pub fn edge_weights_mut(&mut self) -> EdgeWeightsMut<E, Ix> {}
+    /// Return an iterator over the node indices of the graph.
+    pub fn node_indices(&self) -> NodeIndices<Ix> {
+        NodeIndices {
+            r: 0..self.node_count(),
+            ty: PhantomData,
+        }
+    }
+    /// Return an iterator yielding mutable access to all node weights.
+    ///
+    /// The order in which weighs are yielded
+    /// matches the order of their node indices.
+    pub fn node_weights_mut(&mut self) -> NodeWeightsMut<N, Ix> {
+        NodeWeightsMut {
+            nodes: self.nodes.iter_mut()
+        }
+    }
+    /// Return an iterator over the edge indices of the graph.
+    pub fn edge_indices(&self) -> EdgeIndices<Ix> {
+        EdgeIndices {
+            r: 0..self.edge_count(),
+            ty: PhantomData,
+        }
+    }
+    /// Create an iterator over all edges, in indexed order.
+    ///
+    /// Iterator element type is `EdgeReference<E, Ix>`.
+    pub fn edge_references(&self) -> EdgeReferences<E, Ix> {
+        EdgeReferences {
+            iter: self.edges.iter().enumerate()
+        }
+    }
+    /// Return an iterator yielding mutable access to all edge weights.
+    ///
+    /// The order in which weights are yielded
+    /// matches the order of their edge indices
+    pub fn edge_weights_mut(&mut self) -> EdgeWeightsMut<E, Ix> {
+        EdgeWeightsMut {
+            edges: self.edges.iter_mut()
+        }
+    }
 
     // Remaining methods are of the more internal flavour, read-only access to
     // the data structure`s internals.
@@ -956,8 +1011,17 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
         self.nodes.shrink_to_fit();
         self.edges.shrink_to_fit();
     }
+    // TODO:
     // pub fn retain_nodes<F>(&mut self, mut visit: F) where F: FnMut(Frozen<Self>, NodeIndex<Ix>) -> bool {}
     // pub fn retain_edges<F>(&mut self, mut visit: F) where F: FnMut(Frozen<Self>, EdgeIndex<Ix>) -> bool {}
+
+    /// Create a new `Graph` from an iterable of edges.
+    ///
+    /// Node weights `N` are set to default values. Edge weights `E` may
+    /// either be specified in the list, or they are filled with default
+    /// values.
+    ///
+    /// Nodes are inserted automatically to match the edges.
     pub fn from_edges<I>(iterable: I) -> Self
     where
         I: IntoIterator,
@@ -969,6 +1033,13 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
         g.extend_with_edges(iterable);
         g
     }
+    /// Extend the graph from an iterable of edges.
+    ///
+    /// Node weights $N$ are set to default values. Edge weights $E$
+    /// may either be specified in the list, or they are filled with
+    ///
+    /// default values.
+    /// Nodes are inserted automatically to match the edges.
     pub fn extend_with_edges<I>(&mut self, iterable: I)
     where
         I: IntoIterator,
@@ -983,7 +1054,7 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
         for elt in iter {
             let (source, target, weight) = elt.into_weighted_edge();
             let (source, target) = (source.into(), target.into());
-            let nx = ::std::cmp::max(source, target);
+            let nx = cmp::max(source, target);
             while nx.index() >= self.node_count() {
                 self.add_node(N::default());
             }
@@ -1005,6 +1076,7 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
         }
     }
 }
+// * GRAPH TRAIT IMPLs * //
 impl<N, E, Ty, Ix: IndexType> Clone for Graph<N, E, Ty, Ix>
 where
     N: Clone,
@@ -1027,44 +1099,6 @@ where
         Self::with_capacity(0, 0)
     }
 }
-
-struct EdgesWalkerMut<'a, E: 'a, Ix: IndexType = DefaultIx> {
-    edges: &'a mut [Edge<E, Ix>],
-    next: EdgeIndex<Ix>,
-    dir: Direction,
-}
-
-fn edges_walker_mut<E, Ix>(
-    edges: &mut [Edge<E, Ix>],
-    next: EdgeIndex<Ix>,
-    dir: Direction,
-) -> EdgesWalkerMut<E, Ix>
-where
-    Ix: IndexType,
-{
-    EdgesWalkerMut { edges, next, dir }
-}
-
-impl<'a, E, Ix> EdgesWalkerMut<'a, E, Ix>
-where
-    Ix: IndexType,
-{
-    fn next_edge(&mut self) -> Option<&mut Edge<E, Ix>> {
-        self.next().map(|t| t.1)
-    }
-    fn next(&mut self) -> Option<(EdgeIndex<Ix>, &mut Edge<E, Ix>)> {
-        let this_index = self.next;
-        let k = self.dir.index();
-        match self.edges.get_mut(self.next.index()) {
-            None => None,
-            Some(edge) => {
-                self.next = edge.next[k];
-                Some((this_index, edge))
-            }
-        }
-    }
-}
-
 /// Index the `Graph` by `NodeIndex` to access node data.
 ///
 /// **Panics** if the node doesn't exist.
@@ -1078,7 +1112,6 @@ where
         &self.nodes[index.index()].data
     }
 }
-
 /// Index the `Graph` by `NodeIndex` to access node data.
 ///
 /// **Panics** if the node doesn't exist.
@@ -1091,7 +1124,6 @@ where
         &mut self.nodes[index.index()].data
     }
 }
-
 /// Index the `Graph` by `EdgeIndex` to access edge weights.
 ///
 /// **Panics** if the edge doesn't exist.
@@ -1105,7 +1137,6 @@ where
         &self.edges[index.index()].weight
     }
 }
-
 /// Index the `Graph` by `EdgeIndex` to access edge weights.
 ///
 /// **Panics** if the edge doesn't exist.
@@ -1118,7 +1149,57 @@ where
         &mut self.edges[index.index()].weight
     }
 }
+// impl<'a, N, E, Ty, Ix> IntoNodeReferences for &'a Graph<N, E, Ty, Ix>
+// where
+// Ty: EdgeType,
+// Ix: IndexType,
+// {
+// }
 
+//* NODES *//
+/// An iterator over either the nodes without edges to them or from them.
+pub struct Externals<'a, N: 'a, Ty, Ix: IndexType = DefaultIx> {
+    iter: iter::Enumerate<slice::Iter<'a, Node<N, Ix>>>,
+    dir: Direction,
+    ty: PhantomData<Ty>,
+}
+impl<'a, N: 'a, Ty, Ix> Iterator for Externals<'a, N, Ty, Ix>
+where
+    Ty: EdgeType,
+    Ix: IndexType,
+{
+    type Item = NodeIndex<Ix>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let k = self.dir.index();
+        loop {
+            match self.iter.next() {
+                None => return None,
+                Some((index, node)) => {
+                    if node.next[k] == EdgeIndex::end()
+                        && (Ty::is_directed() || node.next[1 - k] == EdgeIndex::end())
+                    {
+                        return Some(NodeIndex::new(index));
+                    } else {
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+}
+/// Iterator yielding mutable access to all node weights.
+pub struct NodeWeightsMut<'a, N: 'a, Ix: IndexType = DefaultIx> {
+    nodes: slice::IterMut<'a, Node<N, Ix>>,
+}
+impl<'a, N, Ix> Iterator for NodeWeightsMut<'a, N, Ix>
+where
+    Ix: IndexType,
+{
+    type Item = &'a mut N;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.nodes.next().map(|node| &mut node.data)
+    }
+}
 /// Iterator over the neighbors of a node.
 ///
 /// Iterator element type is `NodeIndex<Ix>`.
@@ -1178,6 +1259,10 @@ impl<'a, E, Ix> Neighbors<'a, E, Ix>
 where
     Ix: IndexType,
 {
+    /// Return a `walker` object that can be used to step through the neighbours
+    /// and edges from the origin node.
+    /// Note: The walker does not borrow from the graph, this is to allow mixing
+    /// edge walking with mutating the graph's weights.
     pub fn detach(&self) -> WalkNeighbors<Ix> {
         WalkNeighbors {
             skip_start: self.skip_start,
@@ -1185,7 +1270,12 @@ where
         }
     }
 }
-
+/// A "walker" object that can be used to step through the edge list of a node.
+///
+/// Created with [`.detach()`](struct.Neighbors.html#method.detach).
+///
+/// The walker does not borrow from the graph, so it lets you step through
+/// neighbors or incident edges while also mutating graph weights.
 pub struct WalkNeighbors<Ix> {
     skip_start: NodeIndex<Ix>,
     next: [EdgeIndex<Ix>; 2],
@@ -1235,12 +1325,19 @@ impl<Ix: IndexType> WalkNeighbors<Ix> {
         None
     }
 
+    /// Step to the next node in the walk for graph `g`.
+    ///
+    /// The next node indices are always the others than the starting point where
+    /// the `WalkNeighbors` value was created.
+    /// For an `Outgoing` walk, the target nodes,
+    /// for an `Incoming` walk, the source nodes of the edge.
     pub fn next_node<N, E, Ty: EdgeType>(
         &mut self,
         g: &Graph<N, E, Ty, Ix>,
     ) -> Option<NodeIndex<Ix>> {
         self.next(g).map(|t| t.1)
     }
+    /// Step to the next edge in the walk for graph `g`.
     pub fn next_edge<N, E, Ty: EdgeType>(
         &mut self,
         g: &Graph<N, E, Ty, Ix>,
@@ -1248,7 +1345,90 @@ impl<Ix: IndexType> WalkNeighbors<Ix> {
         self.next(g).map(|t| t.0)
     }
 }
+/// Iterator over all nodes of a graph.
+pub struct NodeReferences<'a, N: 'a, Ix: IndexType = DefaultIx> {
+    iter: iter::Enumerate<slice::Iter<'a, Node<N, Ix>>>,
+}
+impl<'a, N, Ix> Iterator for NodeReferences<'a, N, Ix>
+where
+    Ix: IndexType,
+{
+    type Item = (NodeIndex<Ix>, &'a N);
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter
+            .next()
+            .map(|(i, node)| (NodeIndex::new(i), &node.data))
+    }
+}
+impl<'a, N, Ix> DoubleEndedIterator for NodeReferences<'a, N, Ix>
+where
+    Ix: IndexType,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter
+            .next_back()
+            .map(|(i, node)| (NodeIndex::new(i), &node.data))
+    }
+}
+impl<'a, N, Ix> ExactSizeIterator for NodeReferences<'a, N, Ix>
+where
+    Ix: IndexType,
+{
+}
+/// Iterator over the node indices of a graph.
+#[derive(Clone, Debug)]
+pub struct NodeIndices<Ix = DefaultIx> {
+    r: Range<usize>,
+    ty: PhantomData<fn() -> Ix>,
+}
+impl<Ix: IndexType> Iterator for NodeIndices<Ix> {
+    type Item = NodeIndex<Ix>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.r.next().map(NodeIndex::new)
+    }
+}
+impl<Ix: IndexType> DoubleEndedIterator for NodeIndices<Ix> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.r.next_back().map(NodeIndex::new)
+    }
+}
+impl<Ix: IndexType> ExactSizeIterator for NodeIndices<Ix> {}
 
+//* EDGES *//
+struct EdgesWalkerMut<'a, E: 'a, Ix: IndexType = DefaultIx> {
+    edges: &'a mut [Edge<E, Ix>],
+    next: EdgeIndex<Ix>,
+    dir: Direction,
+}
+fn edges_walker_mut<E, Ix>(
+    edges: &mut [Edge<E, Ix>],
+    next: EdgeIndex<Ix>,
+    dir: Direction,
+) -> EdgesWalkerMut<E, Ix>
+where
+    Ix: IndexType,
+{
+    EdgesWalkerMut { edges, next, dir }
+}
+impl<'a, E, Ix> EdgesWalkerMut<'a, E, Ix>
+where
+    Ix: IndexType,
+{
+    fn next_edge(&mut self) -> Option<&mut Edge<E, Ix>> {
+        self.next().map(|t| t.1)
+    }
+    fn next(&mut self) -> Option<(EdgeIndex<Ix>, &mut Edge<E, Ix>)> {
+        let this_index = self.next;
+        let k = self.dir.index();
+        match self.edges.get_mut(self.next.index()) {
+            None => None,
+            Some(edge) => {
+                self.next = edge.next[k];
+                Some((this_index, edge))
+            }
+        }
+    }
+}
 /// Iterator over the edges from or to a node
 pub struct Edges<'a, E: 'a, Ty, Ix: 'a = DefaultIx>
 where
@@ -1269,7 +1449,6 @@ where
     direction: Option<Direction>,
     ty: PhantomData<Ty>,
 }
-
 impl<'a, E, Ty, Ix> Iterator for Edges<'a, E, Ty, Ix>
 where
     Ty: EdgeType,
@@ -1312,9 +1491,12 @@ where
             let i = self.next[1].index();
             self.next[1] = edge.next[1];
             if edge.node[0] != self.skip_start {
+                // previously a call to swap_pair()
+                let mut n: [_; 2] = edge.node;
+                n.swap(0, 1);
                 return Some(EdgeReference {
                     index: EdgeIndex::new(i),
-                    node: swap_pair(edge.node),
+                    node: n,
                     weight: &edge.weight,
                 });
             }
@@ -1322,12 +1504,10 @@ where
         None
     }
 }
-
-fn swap_pair<T>(mut x: [T; 2]) -> [T; 2] {
-    x.swap(0, 1);
-    x
-}
-
+// fn swap_pair<T>(mut x: [T; 2]) -> [T; 2] {
+//     x.swap(0, 1);
+//     x
+// }
 impl<'a, E, Ty, Ix> Clone for Edges<'a, E, Ty, Ix>
 where
     Ty: EdgeType,
@@ -1356,7 +1536,6 @@ impl<'a, E, Ix: IndexType> Clone for EdgeReference<'a, E, Ix> {
         *self
     }
 }
-impl<'a, E, Ix: IndexType> Copy for EdgeReference<'a, E, Ix> {}
 impl<'a, E, Ix: IndexType> PartialEq for EdgeReference<'a, E, Ix>
 where
     E: PartialEq,
@@ -1365,34 +1544,62 @@ where
         self.index == rhs.index && self.weight == rhs.weight
     }
 }
+impl<'a, E, Ix: IndexType> Copy for EdgeReference<'a, E, Ix> {}
 
-/// An iterator over either the nodes without edges to them or from them.
-pub struct Externals<'a, N: 'a, Ty, Ix: IndexType = DefaultIx> {
-    iter: iter::Enumerate<slice::Iter<'a, Node<N, Ix>>>,
-    dir: Direction,
-    ty: PhantomData<Ty>,
+/// Iterator over all edges of a graph.
+pub struct EdgeReferences<'a, E: 'a, Ix: IndexType = DefaultIx> {
+    iter: iter::Enumerate<slice::Iter<'a, Edge<E, Ix>>>,
 }
-impl<'a, N: 'a, Ty, Ix> Iterator for Externals<'a, N, Ty, Ix>
+impl<'a, E, Ix: IndexType> Iterator for EdgeReferences<'a, E, Ix> {
+    type Item = EdgeReference<'a, E, Ix>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|(i, edge)| EdgeReference {
+            index: EdgeIndex::new(i),
+            node: edge.node,
+            weight: &edge.weight,
+        })
+    }
+}
+impl<'a, E, Ix: IndexType> DoubleEndedIterator for EdgeReferences<'a, E, Ix> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back().map(|(i, edge)| EdgeReference {
+            index: EdgeIndex::new(i),
+            node: edge.node,
+            weight: &edge.weight,
+        })
+    }
+}
+impl<'a, E, Ix: IndexType> ExactSizeIterator for EdgeReferences<'a, E, Ix> {}
+
+/// Iterator over the edge indices of a graph.
+pub struct EdgeIndices<Ix = DefaultIx> {
+    r: Range<usize>,
+    ty: PhantomData<fn() -> Ix>,
+}
+impl<Ix: IndexType> Iterator for EdgeIndices<Ix> {
+    type Item = EdgeIndex<Ix>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.r.next().map(EdgeIndex::new)
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.r.size_hint()
+    }
+}
+
+/// Iterator yielding mutable access to all edge weights.
+pub struct EdgeWeightsMut<'a, E: 'a, Ix: IndexType = DefaultIx> {
+    edges: slice::IterMut<'a, Edge<E, Ix>>,
+}
+impl<'a, E, Ix> Iterator for EdgeWeightsMut<'a, E, Ix>
 where
-    Ty: EdgeType,
     Ix: IndexType,
 {
-    type Item = NodeIndex<Ix>;
+    type Item = &'a mut E;
     fn next(&mut self) -> Option<Self::Item> {
-        let k = self.dir.index();
-        loop {
-            match self.iter.next() {
-                None => return None,
-                Some((index, node)) => {
-                    if node.next[k] == EdgeIndex::end()
-                        && (Ty::is_directed() || node.next[1 - k] == EdgeIndex::end())
-                    {
-                        return Some(NodeIndex::new(index));
-                    } else {
-                        continue;
-                    }
-                }
-            }
-        }
+        self.edges.next().map(|edge| &mut edge.weight)
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.edges.size_hint()
     }
 }
