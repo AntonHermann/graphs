@@ -7,7 +7,7 @@ cache: cargo
 rust:
   - nightly
   - beta
-#   - stable
+  - stable
 
 matrix:
   fast-finish: true
