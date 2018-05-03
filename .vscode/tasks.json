@@ -17,6 +17,18 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "cargo fmt",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt"
+            ],
+            "group": "none",
+            "presentation": {
+                "reveal": "never",
+            }
         }
     ]
 }

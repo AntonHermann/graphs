@@ -2,5 +2,13 @@
 name = "graphs"
 version = "0.1.0"
 authors = ["AntonHermann <antonoehler@gmx.de>"]
+repository = "https://github.com/AntonHermann/graphs"
+readme = "README.md"
+description = "at this stage mostly a clone of `petgraph`"
+
+[badges]
+travis-ci = { repository = "AntonHermann/graphs" }
+codecov = { repository = "AntonHermann/graphs", service = "github" }
+maintenance = { status = "experimental" }
 
 [dependencies]
