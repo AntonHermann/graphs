@@ -226,10 +226,11 @@ where
     fn clone(&self) -> Self {
         Node {
             data: self.data.clone(),
-            next: self.next.clone(),
+            next: self.next, // EdgeIndex is Copy
         }
     }
 }
+pub type NodeList<N, Ix> = Vec<Node<N, Ix>>;
 
 /// The graph's edge type.
 #[derive(Debug)]
@@ -263,11 +264,12 @@ where
     fn clone(&self) -> Self {
         Edge {
             weight: self.weight.clone(),
-            next: self.next.clone(),
-            node: self.node.clone(),
+            next: self.next, // EdgeIndex is Copy
+            node: self.node, // NodeIndex is Copy
         }
     }
 }
+pub type EdgeList<E, Ix> = Vec<Edge<E, Ix>>;
 
 /// `Graph<N, E, Ty, Ix>` is a graph datastructure using an adjacency list representation
 ///
@@ -413,7 +415,7 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
     /// its index type (N/A if usize)
     pub fn add_node(&mut self, data: N) -> NodeIndex<Ix> {
         let new_node = Node {
-            data: data,
+            data,
             next: [EdgeIndex::end(), EdgeIndex::end()],
         };
         let node_idx = NodeIndex::new(self.nodes.len());
@@ -449,7 +451,7 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
         let edge_idx = EdgeIndex::new(self.edges.len());
         assert!(EdgeIndex::end() != edge_idx);
         let mut edge = Edge {
-            weight: weight,
+            weight,
             node: [a, b],
             next: [EdgeIndex::end(), EdgeIndex::end()],
         };
@@ -516,9 +518,7 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
     /// including `n` calls to `.remove_edge()` where *n* is the number of edges
     /// with an endpoint in `a`, and including the edges with an edpoint in the displaced node.
     pub fn remove_node(&mut self, a: NodeIndex<Ix>) -> Option<N> {
-        if self.nodes.get(a.index()).is_none() {
-            return None;
-        }
+        self.nodes.get(a.index())?;
         for d in &DIRECTIONS {
             let k = d.index();
             loop {
@@ -829,7 +829,7 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
     pub fn externals(&self, dir: Direction) -> Externals<N, Ty, Ix> {
         Externals {
             iter: self.nodes.iter().enumerate(),
-            dir: dir,
+            dir,
             ty: PhantomData,
         }
     }
@@ -850,7 +850,8 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
         &self.edges
     }
     /// Convert the graph into a vector of nodes and a vector of edges.
-    pub fn into_nodes_edges(self) -> (Vec<Node<N, Ix>>, Vec<Edge<E, Ix>>) {
+    pub fn into_nodes_edges(self) -> (NodeList<N, Ix>, EdgeList<E, Ix>) {
+        // pub fn into_nodes_edges(self) -> (Vec<Node<N, Ix>>, Vec<Edge<E, Ix>>) {
         (self.nodes, self.edges)
     }
     /// Accessor for data structure internals: the first edge in the given direction.
@@ -1017,6 +1018,15 @@ where
         }
     }
 }
+impl<N, E, Ty, Ix> Default for Graph<N, E, Ty, Ix>
+where
+    Ty: EdgeType,
+    Ix: IndexType,
+{
+    fn default() -> Self {
+        Self::with_capacity(0, 0)
+    }
+}
 
 struct EdgesWalkerMut<'a, E: 'a, Ix: IndexType = DefaultIx> {
     edges: &'a mut [Edge<E, Ix>],
@@ -1032,11 +1042,7 @@ fn edges_walker_mut<E, Ix>(
 where
     Ix: IndexType,
 {
-    EdgesWalkerMut {
-        edges: edges,
-        next: next,
-        dir: dir,
-    }
+    EdgesWalkerMut { edges, next, dir }
 }
 
 impl<'a, E, Ix> EdgesWalkerMut<'a, E, Ix>
@@ -1163,8 +1169,8 @@ where
     fn clone(&self) -> Self {
         Neighbors {
             skip_start: self.skip_start,
-            edges: self.edges.clone(),
-            next: self.next.clone(),
+            edges: self.edges,
+            next: self.next, // EdgeIndex is Copy
         }
     }
 }
@@ -1286,7 +1292,7 @@ where
                 return Some(EdgeReference {
                     index: EdgeIndex::new(i),
                     node: *node,
-                    weight: weight,
+                    weight,
                 });
             }
         }

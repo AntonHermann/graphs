@@ -172,7 +172,7 @@ fn edges() {
     test_func!(gs => .edge_endpoints(e2) == Some((nb, nc)));
     test_func!(gs => .contains_edge(nb, nc) == true);
     assert_eq!(gs.0.contains_edge(nc, nb), false);
-    assert_eq!(gs.1.contains_edge(nc, nb), true );
+    assert_eq!(gs.1.contains_edge(nc, nb), true);
     test_func!(gs => .find_edge(nb, nc) == Some(e2));
     test_func!(gs => .find_edge_undirected(nc, nb) == Some((e2, Incoming)));
     assert_eq!(gs.0.source_nodes().collect::<Vec<_>>(), vec![na]);
