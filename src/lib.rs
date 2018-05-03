@@ -1,8 +1,6 @@
 mod graph;
 
 // #[cfg(test)]
-// mod tests;
-
-// pub mod algorithms;
+mod tests;
 
 pub use self::graph::*;

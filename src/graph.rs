@@ -1,7 +1,7 @@
 use std::fmt;
+use std::iter;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
-use std::iter;
 use std::slice;
 
 use Direction::{Incoming, Outgoing};
@@ -101,6 +101,7 @@ where
     }
 }
 
+#[derive(Debug, PartialEq)]
 enum Pair<T> {
     None,
     One(T),
@@ -119,6 +120,15 @@ fn index_twice<T>(slc: &mut [T], a: usize, b: usize) -> Pair<&mut T> {
             Pair::Both(ar, br)
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn test_index_twice() {
+    let mut arr = [5, 7, 3, 9];
+    assert_eq!(index_twice(&mut arr, 1, 3), Pair::Both(&mut 7, &mut 9));
+    assert_eq!(index_twice(&mut arr, 1, 1), Pair::One(&mut 7));
+    assert_eq!(index_twice(&mut arr, 2, 7), Pair::None);
 }
 
 /// The default integer type for graph indices.
@@ -275,7 +285,7 @@ where
 ///
 /// Here is an example of building a graph with directed edges:
 /// ```
-/// use graph::Graph;
+/// use graphs::*;
 ///
 /// let mut deps = Graph::<&str, &str>::new();
 /// let pg = deps.add_node("petgraph");
@@ -785,6 +795,26 @@ impl<N, E, Ty: EdgeType, Ix: IndexType> Graph<N, E, Ty, Ix> {
         None
     }
 
+    /// Return an iterator over the source nodes of the graph/ the nodes
+    /// without edges to them
+    ///
+    /// Wrapper for `.externals(Incoming)`
+    ///
+    /// For a graph with undirected edges, this equals `.sink_nodes()` in
+    /// returning an iterator over all nodes with no edges to or from them.
+    pub fn source_nodes(&self) -> Externals<N, Ty, Ix> {
+        self.externals(Incoming)
+    }
+    /// Return an iterator over the sink nodes of the graph/ the nodes
+    /// without edges from them
+    ///
+    /// Wrapper for `.externals(Outgoing)`
+    ///
+    /// For a graph with undirected edges, this equals `.source_nodes()` in
+    /// returning an iterator over all nodes with no edges to or from them.
+    pub fn sink_nodes(&self) -> Externals<N, Ty, Ix> {
+        self.externals(Outgoing)
+    }
     /// Return an iterator over either the nodes without edges
     /// to them (`Incoming`) or from them (`Outgoing`).
     ///
@@ -1126,7 +1156,10 @@ where
         None
     }
 }
-impl<'a, E, Ix> Clone for Neighbors<'a, E, Ix> where Ix: IndexType {
+impl<'a, E, Ix> Clone for Neighbors<'a, E, Ix>
+where
+    Ix: IndexType,
+{
     fn clone(&self) -> Self {
         Neighbors {
             skip_start: self.skip_start,
@@ -1135,7 +1168,10 @@ impl<'a, E, Ix> Clone for Neighbors<'a, E, Ix> where Ix: IndexType {
         }
     }
 }
-impl<'a, E, Ix> Neighbors<'a, E, Ix> where Ix: IndexType {
+impl<'a, E, Ix> Neighbors<'a, E, Ix>
+where
+    Ix: IndexType,
+{
     pub fn detach(&self) -> WalkNeighbors<Ix> {
         WalkNeighbors {
             skip_start: self.skip_start,
@@ -1148,7 +1184,10 @@ pub struct WalkNeighbors<Ix> {
     skip_start: NodeIndex<Ix>,
     next: [EdgeIndex<Ix>; 2],
 }
-impl<Ix> Clone for WalkNeighbors<Ix> where Ix: IndexType {
+impl<Ix> Clone for WalkNeighbors<Ix>
+where
+    Ix: IndexType,
+{
     fn clone(&self) -> Self {
         WalkNeighbors {
             skip_start: self.skip_start,
@@ -1163,14 +1202,17 @@ impl<Ix: IndexType> WalkNeighbors<Ix> {
     /// the `WalkNeighbors` value was created.
     /// For an `Outgoing` walk, the target nodes,
     /// for an `Incoming` walk, the source nodes of the edge.
-    pub fn next<N, E, Ty: EdgeType>(&mut self, g: &Graph<N, E, Ty, Ix>) -> Option<(EdgeIndex<Ix>, NodeIndex<Ix>)> {
+    pub fn next<N, E, Ty: EdgeType>(
+        &mut self,
+        g: &Graph<N, E, Ty, Ix>,
+    ) -> Option<(EdgeIndex<Ix>, NodeIndex<Ix>)> {
         // First any outgoing edgees
         match g.edges.get(self.next[0].index()) {
-            None => {},
+            None => {}
             Some(edge) => {
                 let ed = self.next[0];
                 self.next[0] = edge.next[0];
-                return Some((ed, edge.node[1]))
+                return Some((ed, edge.node[1]));
             }
         }
         // Then incoming edges
@@ -1181,22 +1223,32 @@ impl<Ix: IndexType> WalkNeighbors<Ix> {
             let ed = self.next[1];
             self.next[1] = edge.next[1];
             if edge.node[0] != self.skip_start {
-                return Some((ed, edge.node[0]))
+                return Some((ed, edge.node[0]));
             }
         }
         None
     }
 
-    pub fn next_node<N, E, Ty: EdgeType>(&mut self, g: &Graph<N, E, Ty, Ix>) -> Option<NodeIndex<Ix>> {
+    pub fn next_node<N, E, Ty: EdgeType>(
+        &mut self,
+        g: &Graph<N, E, Ty, Ix>,
+    ) -> Option<NodeIndex<Ix>> {
         self.next(g).map(|t| t.1)
     }
-    pub fn next_edge<N, E, Ty: EdgeType>(&mut self, g: &Graph<N, E, Ty, Ix>) -> Option<EdgeIndex<Ix>> {
+    pub fn next_edge<N, E, Ty: EdgeType>(
+        &mut self,
+        g: &Graph<N, E, Ty, Ix>,
+    ) -> Option<EdgeIndex<Ix>> {
         self.next(g).map(|t| t.0)
     }
 }
 
 /// Iterator over the edges from or to a node
-pub struct Edges<'a, E: 'a, Ty, Ix: 'a = DefaultIx> where Ty: EdgeType, Ix: IndexType {
+pub struct Edges<'a, E: 'a, Ty, Ix: 'a = DefaultIx>
+where
+    Ty: EdgeType,
+    Ix: IndexType,
+{
     /// starting node to skip over
     skip_start: NodeIndex<Ix>,
     edges: &'a [Edge<E, Ix>],
@@ -1212,7 +1264,11 @@ pub struct Edges<'a, E: 'a, Ty, Ix: 'a = DefaultIx> where Ty: EdgeType, Ix: Inde
     ty: PhantomData<Ty>,
 }
 
-impl<'a, E, Ty, Ix> Iterator for Edges<'a, E, Ty, Ix> where Ty: EdgeType, Ix: IndexType {
+impl<'a, E, Ty, Ix> Iterator for Edges<'a, E, Ty, Ix>
+where
+    Ty: EdgeType,
+    Ix: IndexType,
+{
     type Item = EdgeReference<'a, E, Ix>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -1220,19 +1276,23 @@ impl<'a, E, Ty, Ix> Iterator for Edges<'a, E, Ty, Ix> where Ty: EdgeType, Ix: In
         let k = self.direction.unwrap_or(Outgoing).index();
         let i = self.next[0].index();
         match self.edges.get(i) {
-            None => {},
-            Some(&Edge { ref node, ref weight, ref next }) => {
+            None => {}
+            Some(&Edge {
+                ref node,
+                ref weight,
+                ref next,
+            }) => {
                 self.next[0] = next[k];
                 return Some(EdgeReference {
                     index: EdgeIndex::new(i),
                     node: *node,
                     weight: weight,
-                })
+                });
             }
         }
         // Stop here if we only follow one direction
         if self.direction.is_some() {
-            return None
+            return None;
         }
 
         // Then incoming edges
@@ -1250,7 +1310,7 @@ impl<'a, E, Ty, Ix> Iterator for Edges<'a, E, Ty, Ix> where Ty: EdgeType, Ix: In
                     index: EdgeIndex::new(i),
                     node: swap_pair(edge.node),
                     weight: &edge.weight,
-                })
+                });
             }
         }
         None
@@ -1262,7 +1322,11 @@ fn swap_pair<T>(mut x: [T; 2]) -> [T; 2] {
     x
 }
 
-impl<'a, E, Ty, Ix> Clone for Edges<'a, E, Ty, Ix> where Ty: EdgeType, Ix: IndexType {
+impl<'a, E, Ty, Ix> Clone for Edges<'a, E, Ty, Ix>
+where
+    Ty: EdgeType,
+    Ix: IndexType,
+{
     fn clone(&self) -> Self {
         Edges {
             skip_start: self.skip_start,
@@ -1287,7 +1351,10 @@ impl<'a, E, Ix: IndexType> Clone for EdgeReference<'a, E, Ix> {
     }
 }
 impl<'a, E, Ix: IndexType> Copy for EdgeReference<'a, E, Ix> {}
-impl<'a, E, Ix: IndexType> PartialEq for EdgeReference<'a, E, Ix> where E: PartialEq {
+impl<'a, E, Ix: IndexType> PartialEq for EdgeReference<'a, E, Ix>
+where
+    E: PartialEq,
+{
     fn eq(&self, rhs: &Self) -> bool {
         self.index == rhs.index && self.weight == rhs.weight
     }
@@ -1299,7 +1366,11 @@ pub struct Externals<'a, N: 'a, Ty, Ix: IndexType = DefaultIx> {
     dir: Direction,
     ty: PhantomData<Ty>,
 }
-impl<'a, N: 'a, Ty, Ix> Iterator for Externals<'a, N, Ty, Ix> where Ty: EdgeType, Ix: IndexType {
+impl<'a, N: 'a, Ty, Ix> Iterator for Externals<'a, N, Ty, Ix>
+where
+    Ty: EdgeType,
+    Ix: IndexType,
+{
     type Item = NodeIndex<Ix>;
     fn next(&mut self) -> Option<Self::Item> {
         let k = self.dir.index();
@@ -1307,12 +1378,14 @@ impl<'a, N: 'a, Ty, Ix> Iterator for Externals<'a, N, Ty, Ix> where Ty: EdgeType
             match self.iter.next() {
                 None => return None,
                 Some((index, node)) => {
-                    if node.next[k] == EdgeIndex::end() && (Ty::is_directed() || node.next[1-k] == EdgeIndex::end()) {
-                        return Some(NodeIndex::new(index))
+                    if node.next[k] == EdgeIndex::end()
+                        && (Ty::is_directed() || node.next[1 - k] == EdgeIndex::end())
+                    {
+                        return Some(NodeIndex::new(index));
                     } else {
-                        continue
+                        continue;
                     }
-                },
+                }
             }
         }
     }
